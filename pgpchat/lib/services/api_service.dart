@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static const String _baseUrlKey = 'api_base_url';
   static const String _tokenKey = 'auth_token';
-  static const String _defaultBaseUrl = 'http://192.168.126.1:3000/api';
+  static const String _defaultBaseUrl = 'http://93.127.129.90:3000/api';
 
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
@@ -25,6 +25,10 @@ class ApiService {
     _baseUrl = url;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_baseUrlKey, url);
+  }
+
+  void resetBaseUrlCache() {
+    _baseUrl = null;
   }
 
   Future<String?> get token async {

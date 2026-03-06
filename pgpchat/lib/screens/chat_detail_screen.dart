@@ -36,7 +36,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await context.read<ChatProvider>().loadMessages(widget.otherUserId);
+      context.read<ChatProvider>().startMessagePolling(widget.otherUserId);
       _loadFingerprint();
       _startCountdown();
     });
@@ -88,6 +88,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _disposed = true;
+    context.read<ChatProvider>().stopMessagePolling();
     _countdownTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();

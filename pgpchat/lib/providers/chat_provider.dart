@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 
@@ -8,11 +9,77 @@ class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
   String? _error;
+  Timer? _conversationPollTimer;
+  Timer? _messagePollTimer;
+  String? _currentChatUserId;
 
   List<Map<String, dynamic>> get conversations => _conversations;
   List<Map<String, dynamic>> get messages => _messages;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  // ── Conversations polling ──
+
+  void startConversationPolling() {
+    stopConversationPolling();
+    loadConversations();
+    _conversationPollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _refreshConversations(),
+    );
+  }
+
+  void stopConversationPolling() {
+    _conversationPollTimer?.cancel();
+    _conversationPollTimer = null;
+  }
+
+  Future<void> _refreshConversations() async {
+    try {
+      final result = await _api.getConversations();
+      final updated = List<Map<String, dynamic>>.from(
+          result['conversations'] as List? ?? []);
+      if (!listEquals(_conversations.map((c) => c.toString()).toList(),
+          updated.map((c) => c.toString()).toList())) {
+        _conversations = updated;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  // ── Messages polling ──
+
+  void startMessagePolling(String otherUserId) {
+    stopMessagePolling();
+    _currentChatUserId = otherUserId;
+    loadMessages(otherUserId);
+    _messagePollTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _refreshMessages(),
+    );
+  }
+
+  void stopMessagePolling() {
+    _messagePollTimer?.cancel();
+    _messagePollTimer = null;
+    _currentChatUserId = null;
+  }
+
+  Future<void> _refreshMessages() async {
+    if (_currentChatUserId == null) return;
+    try {
+      final result = await _api.getMessages(_currentChatUserId!);
+      final updated = List<Map<String, dynamic>>.from(
+          result['messages'] as List? ?? []);
+      if (updated.length != _messages.length ||
+          (updated.isNotEmpty &&
+              _messages.isNotEmpty &&
+              updated.first['id'] != _messages.first['id'])) {
+        _messages = updated;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
 
   Future<void> loadConversations() async {
     _isLoading = true;

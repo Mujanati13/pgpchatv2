@@ -7,9 +7,12 @@ import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/chat_list_screen.dart';
+import 'services/api_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Always use the production server URL, overwriting any stale cached value
+  await ApiService().setBaseUrl('http://93.127.129.90:3000/api');
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

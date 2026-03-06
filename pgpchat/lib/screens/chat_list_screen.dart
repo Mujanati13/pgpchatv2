@@ -23,7 +23,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().loadConversations();
+      context.read<ChatProvider>().startConversationPolling();
     });
   }
 
@@ -31,6 +31,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    context.read<ChatProvider>().stopConversationPolling();
+    super.deactivate();
   }
 
   @override

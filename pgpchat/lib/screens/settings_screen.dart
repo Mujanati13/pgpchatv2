@@ -100,7 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontFamily: 'monospace',
                   ),
                   decoration: InputDecoration(
-                    hintText: 'http://10.0.2.2:3000/api',
+                    hintText: 'http://93.127.129.90:3000/api',
                     hintStyle:
                         const TextStyle(color: AppColors.textSubDark, fontSize: 13),
                     filled: true,

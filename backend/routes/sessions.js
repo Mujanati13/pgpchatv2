@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
       isCurrent: s.id === req.sessionId,
     }));
 
-    res.json(result);
+    res.json({ sessions: result });
   } catch (err) {
     console.error('[Sessions] List error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
@@ -45,10 +45,13 @@ router.delete('/:sessionId', async (req, res) => {
   }
 });
 
-// DELETE /api/sessions  — terminate ALL sessions (logs out everywhere)
+// DELETE /api/sessions  — terminate ALL sessions except current
 router.delete('/', async (req, res) => {
   try {
-    await pool.execute('DELETE FROM sessions WHERE user_id = ?', [req.userId]);
+    await pool.execute(
+      'DELETE FROM sessions WHERE user_id = ? AND id != ?',
+      [req.userId, req.sessionId]
+    );
     res.json({ success: true, message: 'All sessions terminated' });
   } catch (err) {
     console.error('[Sessions] Terminate all error:', err.message);
