@@ -1,0 +1,216 @@
+# ==================== Flutter/Dart ====================
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be committed
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/flutter_export_environment.sh
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# iOS/macOS
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Icon??
+**/ios/**/Icon???
+**/ios/**/Icon????
+**/ios/**/Icon?????
+**/ios/**/Icon??????
+**/ios/**/Icon?????? 
+**/ios/**/Icon???????
+**/ios/**/Icon????????
+**/ios/**/Icon?????????
+**/ios/**/Icon??????????
+**/ios/**/Icon???????????
+**/ios/**/Icon????????????
+**/ios/**/Icon?????????????
+**/ios/**/Icon??????????????
+**/ios/**/Icon???????????????
+**/ios/**/Icon????????????????
+**/ios/**/Icon?????????????????
+**/ios/**/Icon??????????????????
+**/ios/**/Icon???????????????????
+**/ios/**/Icon????????????????????
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/*.lock
+**/ios/**/Flutter/GeneratedPluginRegistrant.*
+
+# Android/Gradle
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/android/.gradle/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/gradle-wrapper.jar
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+
+# Mac
+macos/Flutter/Flutter-Debug.xcconfig
+macos/Flutter/Flutter-Release.xcconfig
+
+# Linux
+linux/flutter/generated_plugins.cmake
+
+# Windows
+windows/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+
+# Coverage
+coverage/
+
+# ==================== Node.js / Backend ====================
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Production
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ==================== IDE / Editor ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+
+# ==================== OS Specific ====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+*.lnk
+desktop.ini
+
+# Linux
+.Trash-*
+
+# ==================== Sensitive / Local Data ====================
+# API Keys and Secrets
+*.key
+*.pem
+*.cert
+*.crt
+secrets/
+.secrets/
+config/local.js
+config/development.js
+
+# Database files
+*.db
+*.sqlite3
+*.sqlite
+
+# PGP Keys (should never be committed!)
+pgp_private_key.asc
+pgp_public_key.asc
+**/shared_preferences/
+
+# Authentication tokens
+tokens/
+*.token
+
+# ==================== Generated / Temporary ====================
+.generated/
+generated/
+*.generated.dart
+*.g.dart
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# ==================== Project Specific ====================
+# Build directories
+pgpchat/build/
+backend/dist/
+
+# Local configuration
+local.properties
+.env.local
+
+# macOS specific
+.DS_Store
+
+# Firebase
+google-services.json
+GoogleService-Info.plist

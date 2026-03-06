@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Management Sessions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2530",
+                        "neutral-muted-light": "#e2e8f0",
+                        "neutral-muted-dark": "#2a3b4c",
+                        "text-main-light": "#0f172a",
+                        "text-main-dark": "#f8fafc",
+                        "text-sub-light": "#64748b",
+                        "text-sub-dark": "#94a3b8"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark font-display min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col max-w-md mx-auto overflow-x-hidden shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<div class="flex items-center p-4 pb-2 justify-between border-b border-neutral-muted-light dark:border-neutral-muted-dark bg-surface-light dark:bg-surface-dark sticky top-0 z-10">
+<button class="flex size-12 shrink-0 items-center justify-center text-primary hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back_ios_new</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Device Management</h2>
+</div>
+<div class="flex flex-col gap-6 p-4">
+<!-- Current Device Section -->
+<section>
+<h3 class="text-text-sub-light dark:text-text-sub-dark text-sm font-semibold uppercase tracking-wider mb-3 px-1">Current Device</h3>
+<div class="flex flex-col gap-4 bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-primary/20 shadow-sm relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="flex items-start justify-between gap-4">
+<div class="flex items-start gap-4">
+<div class="flex items-center justify-center rounded-full bg-primary/20 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined text-[24px]">smartphone</span>
+</div>
+<div class="flex flex-1 flex-col justify-center">
+<p class="text-base font-medium leading-normal">iPhone 13 Pro</p>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="size-2 rounded-full bg-green-500"></span>
+<p class="text-text-sub-light dark:text-text-sub-dark text-sm font-normal leading-normal">Online now</p>
+</div>
+<div class="flex items-center gap-1 mt-1 text-text-sub-light dark:text-text-sub-dark">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+<p class="text-xs font-normal leading-normal">New York, US (Obfuscated IP)</p>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium leading-normal transition-colors mt-2 border border-red-500/20">
+<span class="material-symbols-outlined text-[18px] mr-2">logout</span>
+<span class="truncate">Logout this device</span>
+</button>
+</div>
+</section>
+<!-- Active Sessions Section -->
+<section>
+<div class="flex items-center justify-between mb-3 px-1">
+<h3 class="text-text-sub-light dark:text-text-sub-dark text-sm font-semibold uppercase tracking-wider">Active Sessions</h3>
+<button class="text-primary text-sm font-medium hover:underline">Terminate All</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Session Item 1 -->
+<div class="flex items-start justify-between gap-4 bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-neutral-muted-light dark:border-neutral-muted-dark">
+<div class="flex items-start gap-4 flex-1">
+<div class="flex items-center justify-center rounded-full bg-neutral-muted-light dark:bg-neutral-muted-dark text-text-sub-light dark:text-text-sub-dark shrink-0 size-12">
+<span class="material-symbols-outlined text-[24px]">desktop_windows</span>
+</div>
+<div class="flex flex-1 flex-col justify-center min-w-0">
+<p class="text-base font-medium leading-normal truncate">Windows Desktop</p>
+<p class="text-text-sub-light dark:text-text-sub-dark text-sm font-normal leading-normal mt-0.5">Last active: 2 hours ago</p>
+<div class="flex items-center gap-1 mt-1 text-text-sub-light dark:text-text-sub-dark">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+<p class="text-xs font-normal leading-normal truncate">London, UK (Obfuscated IP)</p>
+</div>
+</div>
+</div>
+<div class="shrink-0 flex items-center h-12">
+<button aria-label="Logout" class="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-red-500/10 text-text-sub-light dark:text-text-sub-dark hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+<!-- Session Item 2 -->
+<div class="flex items-start justify-between gap-4 bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-neutral-muted-light dark:border-neutral-muted-dark">
+<div class="flex items-start gap-4 flex-1">
+<div class="flex items-center justify-center rounded-full bg-neutral-muted-light dark:bg-neutral-muted-dark text-text-sub-light dark:text-text-sub-dark shrink-0 size-12">
+<span class="material-symbols-outlined text-[24px]">laptop_mac</span>
+</div>
+<div class="flex flex-1 flex-col justify-center min-w-0">
+<p class="text-base font-medium leading-normal truncate">MacBook Pro 16"</p>
+<p class="text-text-sub-light dark:text-text-sub-dark text-sm font-normal leading-normal mt-0.5">Last active: Yesterday</p>
+<div class="flex items-center gap-1 mt-1 text-text-sub-light dark:text-text-sub-dark">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+<p class="text-xs font-normal leading-normal truncate">Berlin, DE (Obfuscated IP)</p>
+</div>
+</div>
+</div>
+<div class="shrink-0 flex items-center h-12">
+<button aria-label="Logout" class="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-red-500/10 text-text-sub-light dark:text-text-sub-dark hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+<!-- Session Item 3 -->
+<div class="flex items-start justify-between gap-4 bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-neutral-muted-light dark:border-neutral-muted-dark">
+<div class="flex items-start gap-4 flex-1">
+<div class="flex items-center justify-center rounded-full bg-neutral-muted-light dark:bg-neutral-muted-dark text-text-sub-light dark:text-text-sub-dark shrink-0 size-12">
+<span class="material-symbols-outlined text-[24px]">tablet_android</span>
+</div>
+<div class="flex flex-1 flex-col justify-center min-w-0">
+<p class="text-base font-medium leading-normal truncate">Android Tablet</p>
+<p class="text-text-sub-light dark:text-text-sub-dark text-sm font-normal leading-normal mt-0.5">Last active: 3 days ago</p>
+<div class="flex items-center gap-1 mt-1 text-text-sub-light dark:text-text-sub-dark">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+<p class="text-xs font-normal leading-normal truncate">Tokyo, JP (Obfuscated IP)</p>
+</div>
+</div>
+</div>
+<div class="shrink-0 flex items-center h-12">
+<button aria-label="Logout" class="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-red-500/10 text-text-sub-light dark:text-text-sub-dark hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<div class="mt-4 p-4 bg-primary/10 rounded-xl border border-primary/20">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">security</span>
+<p class="text-sm text-text-sub-light dark:text-text-sub-dark leading-relaxed">
+                        For your security, old sessions are automatically terminated after 30 days of inactivity. All connections use PGP encryption.
+                    </p>
+</div>
+</div>
+</div>
+<div class="h-8"></div>
+</div>
+</body></html>

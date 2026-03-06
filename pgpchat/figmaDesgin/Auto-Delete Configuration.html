@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Auto-Delete Configuration</title>
+<!-- Google Fonts: Inter & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide scrollbar for clean look */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex justify-center antialiased">
+<!-- Mobile App Container -->
+<div class="relative flex h-full min-h-screen w-full max-w-md flex-col overflow-x-hidden border-x border-slate-200 dark:border-slate-800 shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Header -->
+<header class="flex items-center justify-between p-4 pb-2 sticky top-0 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md z-10">
+<button class="text-primary flex size-10 shrink-0 items-center justify-center -ml-2 rounded-full active:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-[28px]">arrow_back_ios_new</span>
+</button>
+<h1 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-8">
+                Auto-delete
+            </h1>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto pb-8">
+<!-- Info Text -->
+<div class="px-5 pt-4 pb-2">
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                    Automatically wipe out message history for maximum privacy. Settings apply to all new messages.
+                </p>
+</div>
+<!-- Configuration List -->
+<div class="px-4 mt-2">
+<div class="bg-white dark:bg-[#1a2530] rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800/50">
+<!-- Toggle Row -->
+<div class="flex items-center gap-4 px-4 min-h-[76px] py-3 justify-between">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-xl bg-primary/10 shrink-0 size-11">
+<span class="material-symbols-outlined text-[24px]">history_toggle_off</span>
+</div>
+<div class="flex flex-col justify-center pr-2">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold leading-snug">Auto-delete Messages</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5 leading-normal">Self-destruct timer</p>
+</div>
+</div>
+<div class="shrink-0">
+<!-- iOS Style Toggle -->
+<label class="relative flex h-[32px] w-[52px] cursor-pointer items-center rounded-full border-none bg-slate-200 dark:bg-[#2a3a4a] p-[2px] has-[:checked]:justify-end has-[:checked]:bg-primary transition-all duration-300">
+<div class="h-[28px] w-[28px] rounded-full bg-white shadow-sm transition-all duration-300" style="box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06);"></div>
+<input checked="" class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+<div class="h-px bg-slate-100 dark:bg-slate-700/50 mx-4"></div>
+<!-- Timer Slider Section -->
+<div class="flex flex-col gap-4 p-4 pt-5 pb-6">
+<div class="flex w-full items-center justify-between">
+<p class="text-slate-900 dark:text-slate-100 text-[15px] font-medium">Time limit</p>
+<p class="text-primary text-[15px] font-semibold">24 hours</p>
+</div>
+<!-- Custom Slider -->
+<div class="relative flex h-8 w-full items-center px-1">
+<!-- Track Background -->
+<div class="absolute left-0 right-0 h-1.5 rounded-full bg-slate-200 dark:bg-[#2a3a4a]"></div>
+<!-- Active Track -->
+<div class="absolute left-0 h-1.5 w-[50%] rounded-full bg-primary"></div>
+<!-- Thumb -->
+<div class="absolute left-[50%] h-7 w-7 -ml-3.5 rounded-full bg-white border border-slate-200 dark:border-slate-600 shadow-md flex items-center justify-center cursor-pointer transform hover:scale-110 transition-transform">
+</div>
+</div>
+<!-- Slider Labels -->
+<div class="flex justify-between w-full px-1 text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">
+<span>1 hr</span>
+<span>12 hr</span>
+<span class="text-slate-900 dark:text-slate-200">24 hr</span>
+<span>1 wk</span>
+<span>1 mo</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-5 pt-4">
+<p class="text-slate-500 dark:text-slate-400 text-xs leading-relaxed text-center">
+                    Messages are securely wiped using military-grade deletion algorithms upon timer expiration.
+                </p>
+</div>
+</main>
+<!-- Modal Overlay (Confirmation Dialog) -->
+<div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px] p-6 animate-in fade-in duration-200">
+<!-- iOS Style Alert Box -->
+<div class="w-full max-w-[290px] bg-background-light dark:bg-[#1c2733] rounded-2xl overflow-hidden shadow-2xl flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
+<!-- Content -->
+<div class="p-5 pt-6 flex flex-col items-center text-center gap-2">
+<div class="text-red-500 mb-1">
+<span class="material-symbols-outlined text-[36px]">warning</span>
+</div>
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold tracking-tight">Are you sure?</h3>
+<p class="text-slate-600 dark:text-slate-300 text-[13px] leading-snug px-2">
+                        This will immediately delete messages older than 24 hours. This action cannot be undone.
+                    </p>
+</div>
+<!-- Actions -->
+<div class="flex flex-col mt-2 border-t border-slate-200 dark:border-slate-700/70">
+<button class="w-full py-3.5 text-red-500 dark:text-red-400 font-semibold text-[17px] tracking-tight border-b border-slate-200 dark:border-slate-700/70 active:bg-slate-100 dark:active:bg-slate-800/50 transition-colors">
+                        Yes, delete immediately
+                    </button>
+<button class="w-full py-3.5 text-primary font-normal text-[17px] tracking-tight active:bg-slate-100 dark:active:bg-slate-800/50 transition-colors">
+                        No, cancel
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

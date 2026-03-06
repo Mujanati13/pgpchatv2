@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manage PGP Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto bg-white dark:bg-[#101922]">
+<!-- Header -->
+<header class="sticky top-0 z-10 bg-white/80 dark:bg-[#101922]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between h-14">
+<button aria-label="Go back" class="flex size-10 shrink-0 items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios</span>
+</button>
+<h2 class="text-lg font-semibold leading-tight tracking-tight flex-1 text-center mr-10">Manage PGP</h2>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-8">
+<!-- Key Management Section -->
+<section class="mt-4">
+<h3 class="text-sm font-semibold text-primary uppercase tracking-wider px-4 pb-2 pt-4">Key Management</h3>
+<div class="bg-white dark:bg-[#1a2634] border-y sm:border sm:rounded-xl sm:mx-4 sm:mb-6 border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<!-- Import PGP Key -->
+<button class="w-full flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-50 dark:hover:bg-[#202e3f] transition-colors group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-10">
+<span class="material-symbols-outlined">download</span>
+</div>
+<div class="flex flex-col text-left">
+<p class="text-base font-medium leading-normal line-clamp-1">Import PGP Key</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal line-clamp-1">Import existing private or public keys</p>
+</div>
+</div>
+<div class="shrink-0 text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</button>
+<div class="h-px bg-slate-200 dark:bg-slate-800 ml-16"></div>
+<!-- Generate New Key -->
+<button class="w-full flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-50 dark:hover:bg-[#202e3f] transition-colors group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-10">
+<span class="material-symbols-outlined">key</span>
+</div>
+<div class="flex flex-col text-left">
+<p class="text-base font-medium leading-normal line-clamp-1">Generate New Key</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal line-clamp-1">Create a new 4096-bit RSA key pair</p>
+</div>
+</div>
+<div class="shrink-0 text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</button>
+<div class="h-px bg-slate-200 dark:bg-slate-800 ml-16"></div>
+<!-- Download Public Key -->
+<button class="w-full flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-50 dark:hover:bg-[#202e3f] transition-colors group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-10">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex flex-col text-left">
+<p class="text-base font-medium leading-normal line-clamp-1">Download Public Key</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal line-clamp-1">Save public key as PGP.txt</p>
+</div>
+</div>
+<div class="shrink-0 text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Manual Tools Section -->
+<section class="mt-6">
+<h3 class="text-sm font-semibold text-primary uppercase tracking-wider px-4 pb-2 pt-4">Manual Tools</h3>
+<div class="bg-white dark:bg-[#1a2634] border-y sm:border sm:rounded-xl sm:mx-4 sm:mb-6 border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<!-- Encrypt Message -->
+<button class="w-full flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-50 dark:hover:bg-[#202e3f] transition-colors group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0 size-10">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<div class="flex flex-col text-left">
+<p class="text-base font-medium leading-normal line-clamp-1">Encrypt Message</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal line-clamp-1">Manually encrypt text for a contact</p>
+</div>
+</div>
+<div class="shrink-0 text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</button>
+<div class="h-px bg-slate-200 dark:bg-slate-800 ml-16"></div>
+<!-- Decrypt Message -->
+<button class="w-full flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-50 dark:hover:bg-[#202e3f] transition-colors group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 shrink-0 size-10">
+<span class="material-symbols-outlined">lock_open</span>
+</div>
+<div class="flex flex-col text-left">
+<p class="text-base font-medium leading-normal line-clamp-1">Decrypt Message</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal line-clamp-1">Decrypt raw PGP blocks</p>
+</div>
+</div>
+<div class="shrink-0 text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</button>
+<div class="h-px bg-slate-200 dark:bg-slate-800 ml-16"></div>
+<!-- Sign Message -->
+<button class="w-full flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-50 dark:hover:bg-[#202e3f] transition-colors group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 shrink-0 size-10">
+<span class="material-symbols-outlined">draw</span>
+</div>
+<div class="flex flex-col text-left">
+<p class="text-base font-medium leading-normal line-clamp-1">Sign Message</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal line-clamp-1">Digitally sign cleartext messages</p>
+</div>
+</div>
+<div class="shrink-0 text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="mt-8 mb-4 px-4">
+<button class="w-full bg-white dark:bg-[#1a2634] border border-red-500/30 rounded-xl p-4 flex flex-col items-center justify-center gap-1 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shadow-sm text-red-500">
+<span class="text-base font-semibold">Reset PGP Protocol</span>
+<span class="text-xs text-red-500/70">Wipe all keys and local encrypted data</span>
+</button>
+</section>
+</main>
+</div>
+</body></html>

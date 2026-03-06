@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PGP Key Gen Step 3 Processing</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "slate-800": "#1e293b",
+                        "slate-700": "#334155",
+                        "slate-600": "#475569",
+                        "slate-500": "#64748b",
+                        "slate-400": "#94a3b8",
+                        "slate-300": "#cbd5e1",
+                        "slate-200": "#e2e8f0",
+                        "slate-100": "#f1f5f9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden max-w-md mx-auto bg-background-light dark:bg-background-dark border-x border-slate-200 dark:border-slate-800">
+<!-- Top App Bar -->
+<div class="flex items-center p-4 pb-2 justify-between">
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center px-12">Key Generation</h2>
+</div>
+<!-- Progress Indicator -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-5">
+<div class="h-2 w-2 rounded-full bg-primary/30 dark:bg-slate-700"></div>
+<div class="h-2 w-2 rounded-full bg-primary/30 dark:bg-slate-700"></div>
+<div class="h-2 w-2 rounded-full bg-primary"></div>
+</div>
+<!-- Visual/Animation Container -->
+<div class="flex flex-col items-center justify-center flex-1 p-6">
+<div class="w-48 h-48 mb-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden">
+<!-- Inner circle for the lock icon -->
+<div class="z-10 bg-background-light dark:bg-background-dark p-6 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-6xl text-primary animate-[spin_3s_linear_infinite]">
+                        lock
+                    </span>
+</div>
+<!-- Simulated data flow background -->
+<div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary via-transparent to-transparent"></div>
+</div>
+<h1 class="text-slate-900 dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-center pb-3 pt-5">
+                Generating your secure key pair locally...
+            </h1>
+<p class="text-slate-600 dark:text-slate-400 text-base font-normal leading-normal pb-8 pt-1 px-4 text-center">
+                Do not close the app. Your private key stays on this device.
+            </p>
+<!-- Progress Bar -->
+<div class="w-full max-w-xs bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mb-2">
+<div class="bg-primary h-2.5 rounded-full" style="width: 90%"></div>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">90% Complete</p>
+</div>
+<div class="h-5"></div>
+</div>
+</body></html>

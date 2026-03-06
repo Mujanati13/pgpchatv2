@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PGP Key Gen Step 2 Security</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#137fec",
+          "background-light": "#f6f7f8",
+          "background-dark": "#101922",
+        },
+        fontFamily: {
+          "display": ["Inter", "sans-serif"]
+        },
+        borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+      },
+    },
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<header class="flex flex-col px-4 pt-12 pb-4 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800/50">
+<div class="flex items-center justify-between mb-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 active:bg-slate-200 dark:active:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</button>
+<h2 class="text-lg font-semibold tracking-tight">Key Parameters</h2>
+<div class="w-10 h-10"></div> <!-- Placeholder for balance -->
+</div>
+<!-- Progress Bar -->
+<div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full transition-all duration-300" style="width: 66%;"></div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-8 pb-32">
+<!-- Header Text -->
+<div>
+<h1 class="text-2xl font-bold tracking-tight mb-2">Algorithm Setup</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+            Choose the cryptographic algorithm and key size for your new PGP key pair, then secure it with a strong passphrase.
+        </p>
+</div>
+<!-- Algorithm Selection -->
+<section>
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 ml-1">Algorithm</h3>
+<div class="flex flex-col gap-3">
+<!-- Selected Option (RSA) -->
+<label class="relative flex items-center p-4 cursor-pointer rounded-xl border-2 border-primary bg-primary/5 dark:bg-primary/10 transition-all">
+<input checked="" class="peer sr-only" name="algorithm" type="radio" value="rsa"/>
+<div class="flex-1">
+<div class="font-semibold text-base mb-1">RSA (Recommended)</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">Widely compatible, robust security.</div>
+</div>
+<div class="ml-4 w-6 h-6 rounded-full border-2 border-primary flex items-center justify-center bg-white dark:bg-background-dark">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+</div>
+</label>
+<!-- Unselected Option (ECC) -->
+<label class="relative flex items-center p-4 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+<input class="peer sr-only" name="algorithm" type="radio" value="ecc"/>
+<div class="flex-1">
+<div class="font-semibold text-base mb-1">ECC (Elliptic Curve)</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">Faster, smaller keys, modern security.</div>
+</div>
+<div class="ml-4 w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center bg-transparent">
+</div>
+</label>
+</div>
+</section>
+<!-- Key Length Selection -->
+<section>
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 ml-1">Key Length</h3>
+<div class="grid grid-cols-2 gap-3">
+<!-- Unselected Size (2048) -->
+<label class="relative flex flex-col items-center justify-center p-4 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-center">
+<input class="peer sr-only" name="keysize" type="radio" value="2048"/>
+<span class="font-bold text-lg mb-1">2048</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">Standard</span>
+</label>
+<!-- Selected Size (4096) -->
+<label class="relative flex flex-col items-center justify-center p-4 cursor-pointer rounded-xl border-2 border-primary bg-primary/5 dark:bg-primary/10 transition-all text-center">
+<input checked="" class="peer sr-only" name="keysize" type="radio" value="4096"/>
+<span class="font-bold text-lg text-primary mb-1">4096</span>
+<span class="text-xs text-primary/80">High Security</span>
+</label>
+</div>
+</section>
+<!-- Passphrase Section -->
+<section>
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 ml-1">Passphrase</h3>
+<div class="relative">
+<input class="w-full bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3.5 text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow pr-12" placeholder="Protect your key pair..." type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" type="button">
+<span class="material-symbols-outlined text-[22px]">visibility_off</span>
+</button>
+</div>
+<!-- Strength Meter -->
+<div class="mt-3 px-1">
+<div class="flex gap-1.5 h-1.5">
+<div class="flex-1 rounded-full bg-yellow-400"></div>
+<div class="flex-1 rounded-full bg-yellow-400"></div>
+<div class="flex-1 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+<div class="flex-1 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-xs text-slate-500 dark:text-slate-400">Use at least 8 characters, numbers &amp; symbols.</span>
+<span class="text-xs font-medium text-yellow-600 dark:text-yellow-400">Fair</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Action -->
+<footer class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark dark:to-transparent pt-8 pb-8">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98] transition-all">
+<span>Generate Key Pair</span>
+<span class="material-symbols-outlined text-[20px]">vpn_key</span>
+</button>
+</footer>
+</body></html>

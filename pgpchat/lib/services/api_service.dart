@@ -1,0 +1,237 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ApiService {
+  static const String _baseUrlKey = 'api_base_url';
+  static const String _tokenKey = 'auth_token';
+  static const String _defaultBaseUrl = 'http://192.168.126.1:3000/api';
+
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
+  String? _token;
+  String? _baseUrl;
+
+  Future<String> get baseUrl async {
+    if (_baseUrl != null) return _baseUrl!;
+    final prefs = await SharedPreferences.getInstance();
+    _baseUrl = prefs.getString(_baseUrlKey) ?? _defaultBaseUrl;
+    return _baseUrl!;
+  }
+
+  Future<void> setBaseUrl(String url) async {
+    _baseUrl = url;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_baseUrlKey, url);
+  }
+
+  Future<String?> get token async {
+    if (_token != null) return _token;
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString(_tokenKey);
+    return _token;
+  }
+
+  Future<void> setToken(String? t) async {
+    _token = t;
+    final prefs = await SharedPreferences.getInstance();
+    if (t == null) {
+      await prefs.remove(_tokenKey);
+    } else {
+      await prefs.setString(_tokenKey, t);
+    }
+  }
+
+  Future<Map<String, String>> _headers() async {
+    final t = await token;
+    return {
+      'Content-Type': 'application/json',
+      if (t != null) 'Authorization': 'Bearer $t',
+    };
+  }
+
+  Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: body['error'] as String? ?? 'Unknown error',
+    );
+  }
+
+  Future<Map<String, dynamic>> get(String path,
+      {Map<String, String>? queryParams}) async {
+    final url = Uri.parse('${await baseUrl}$path')
+        .replace(queryParameters: queryParams);
+    final response = await http.get(url, headers: await _headers());
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> post(String path,
+      {Map<String, dynamic>? body}) async {
+    final url = Uri.parse('${await baseUrl}$path');
+    final response = await http.post(
+      url,
+      headers: await _headers(),
+      body: body != null ? jsonEncode(body) : null,
+    );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> put(String path,
+      {Map<String, dynamic>? body}) async {
+    final url = Uri.parse('${await baseUrl}$path');
+    final response = await http.put(
+      url,
+      headers: await _headers(),
+      body: body != null ? jsonEncode(body) : null,
+    );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> delete(String path) async {
+    final url = Uri.parse('${await baseUrl}$path');
+    final response = await http.delete(url, headers: await _headers());
+    return _handleResponse(response);
+  }
+
+  // ========== Users ==========
+
+  Future<Map<String, dynamic>> searchUsers(String query) async {
+    return get('/users/search', queryParams: {'q': query});
+  }
+
+  // ========== Auth ==========
+
+  Future<Map<String, dynamic>> register(
+      String username, String password) async {
+    final result = await post('/auth/register', body: {
+      'username': username,
+      'password': password,
+    });
+    await setToken(result['token'] as String);
+    return result;
+  }
+
+  Future<Map<String, dynamic>> login(String username, String password) async {
+    final result = await post('/auth/login', body: {
+      'username': username,
+      'password': password,
+    });
+    await setToken(result['token'] as String);
+    return result;
+  }
+
+  Future<void> logout() async {
+    try {
+      await post('/auth/logout');
+    } finally {
+      await setToken(null);
+    }
+  }
+
+  Future<Map<String, dynamic>> updatePublicKey(String publicKey) async {
+    return put('/auth/public-key', body: {'publicKey': publicKey});
+  }
+
+  Future<Map<String, dynamic>> resetPgp() async {
+    return post('/auth/reset-pgp');
+  }
+
+  // ========== Messages ==========
+
+  Future<Map<String, dynamic>> getMessages(String otherUserId,
+      {int? before, int limit = 50}) async {
+    final params = <String, String>{
+      'contactId': otherUserId,
+      'limit': limit.toString(),
+    };
+    if (before != null) params['before'] = before.toString();
+    return get('/messages', queryParams: params);
+  }
+
+  Future<Map<String, dynamic>> sendMessage({
+    required String recipientId,
+    required String encryptedBody,
+    String? signature,
+  }) async {
+    return post('/messages', body: {
+      'recipientId': recipientId,
+      'encryptedBody': encryptedBody,
+      if (signature != null) 'signature': signature,
+    });
+  }
+
+  Future<Map<String, dynamic>> getConversations() async {
+    return get('/messages/conversations');
+  }
+
+  // ========== Contacts ==========
+
+  Future<Map<String, dynamic>> getContacts() async {
+    return get('/contacts');
+  }
+
+  Future<Map<String, dynamic>> addContact(String usernameOrId) async {
+    // Send as username so the backend can look up by display name
+    return post('/contacts', body: {'username': usernameOrId});
+  }
+
+  Future<Map<String, dynamic>> removeContact(String contactId) async {
+    return delete('/contacts/$contactId');
+  }
+
+  Future<Map<String, dynamic>> toggleBlock(
+      String contactId, bool blocked) async {
+    return put('/contacts/$contactId/block', body: {'blocked': blocked});
+  }
+
+  Future<Map<String, dynamic>> blockByKey(String pgpKeyFragment) async {
+    return post('/contacts/block-key', body: {
+      'pgpKeyFragment': pgpKeyFragment,
+    });
+  }
+
+  // ========== Sessions ==========
+
+  Future<Map<String, dynamic>> getSessions() async {
+    return get('/sessions');
+  }
+
+  Future<Map<String, dynamic>> terminateSession(String sessionId) async {
+    return delete('/sessions/$sessionId');
+  }
+
+  Future<Map<String, dynamic>> terminateAllSessions() async {
+    return delete('/sessions');
+  }
+
+  // ========== Settings ==========
+
+  Future<Map<String, dynamic>> getSettings() async {
+    return get('/settings');
+  }
+
+  Future<Map<String, dynamic>> updateSettings(
+      Map<String, dynamic> settings) async {
+    return put('/settings', body: settings);
+  }
+
+  Future<Map<String, dynamic>> autoDeleteNow({int? hours}) async {
+    return post('/settings/auto-delete-now',
+        body: hours != null ? {'hours': hours} : null);
+  }
+}
+
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+  const ApiException({required this.statusCode, required this.message});
+
+  @override
+  String toString() => 'ApiException($statusCode): $message';
+}

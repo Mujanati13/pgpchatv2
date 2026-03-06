@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html class="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+    <div
+        class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto border-x border-slate-200 dark:border-slate-800">
+        <!-- Top App Bar -->
+        <div
+            class="flex items-center p-4 pb-2 justify-between sticky top-0 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md z-10">
+            <div
+                class="flex size-12 shrink-0 items-center justify-center cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+                <span class="material-symbols-outlined text-2xl">menu</span>
+            </div>
+            <h2 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Secure Chats</h2>
+            <div class="flex w-12 items-center justify-end">
+                <button
+                    class="flex size-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-2xl">search</span>
+                </button>
+            </div>
+        </div>
+        <!-- Chat List -->
+        <div class="flex-1 overflow-y-auto pb-24">
+            <!-- Chat Item 1 -->
+            <div
+                class="flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0 shadow-sm"
+                        data-alt="Alice Swift Profile Avatar"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDkoq0qVNG2GQtD3BVncXFiq8uIs2pKNSReTxCeaQ59nEd2BN9lk1xKKuVl5nck9p0PSvVr0jg79XL6mKZhQjHjaqyZEzSsHe-3lQlMIbyUqIafS_MA1DxYsVTrGrZHwJWjea26MIXZhr-2oZtAUL2nh7q0UY6mseUJpqCrctksGvRBAUKOc8n5ZNyMvIeSPo1eUZJiys126ECgR67blMVjgEpOjCgX7ZglkE6A1wsIZUHx7OH1JNypdUzz3tS39w8W56DTK9TMlQA");'>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <p class="text-base font-semibold leading-normal truncate">Alice Swift</p>
+                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                                <span class="material-symbols-outlined text-[14px] text-primary">timer</span>
+                                <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">12:34 PM</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px] text-slate-400">lock</span>
+                            <p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal truncate">
+                                Encrypted message...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Chat Item 2 -->
+            <div
+                class="flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0 shadow-sm"
+                        data-alt="Bob Williams Profile Avatar"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCtjGXuG99geOXjji_BJeJmldiIz1WEwUb6HCyVeZRH23UpyUxvEiEe2lweysueZbfGL-lySkcDeUVUuYCS-2n82OzKcwhgM518izmf1BrewJ_k588x7Xo2Q_cc-MqSuwhcOPOB7CQ3qu0Sbs1RzGehbquKVjQuh9mACR3e1IRh1vK-lwiFo2lgoLAs2_BIL9wMb4jALfB8e_qx5svFwgr78ccvO6CccTytLrMjmO6DAAmKiDw_RxHI8_mccQhwGrIRG7hqkugKJ48");'>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <p class="text-base font-semibold leading-normal truncate">Bob Williams</p>
+                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                                <span class="material-symbols-outlined text-[14px] text-slate-400">timer</span>
+                                <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Yesterday</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px] text-slate-400">lock</span>
+                            <p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal truncate">
+                                PGP Message encrypted</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Chat Item 3 -->
+            <div
+                class="flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors bg-primary/5 dark:bg-primary/10">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0 shadow-sm"
+                        data-alt="Charlie Brown Profile Avatar"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD4xOyWQrqOYjt8Q8QyHx-FktSqMjT5xg_wZBBc6DmMGZ4-V3UwMs_ZXg8p9KyYfJjkzWQ3pABoT5CLfYdaZeApLrA9nWoxCHzauPtQ5ttHAWJ_pCa5Sera4mn428V2t1DkBb9K8KDhEcBFTcepCnFkbCufHOygL5M84ECqhUA3C2IRVNDLWeOy1K0CJj15zWQYki6RatMf7PAdG68QBAlqPK84_wAbkd7BJ56chsl3h2BSoQ4h6Iah38Gm6rAEdq3ey1f206zZnhM");'>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <p class="text-base font-semibold leading-normal truncate text-primary dark:text-primary">
+                                Charlie Brown</p>
+                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                                <span class="material-symbols-outlined text-[14px] text-primary">timer</span>
+                                <p class="text-primary text-xs font-medium">Oct 24</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px] text-primary">done_all</span>
+                            <p class="text-slate-600 dark:text-slate-300 text-sm font-medium leading-normal truncate">
+                                I'll send the key later</p>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="shrink-0 flex items-center justify-center bg-primary text-white text-xs font-bold h-5 w-5 rounded-full shadow-sm">
+                    2
+                </div>
+            </div>
+            <!-- Chat Item 4 -->
+            <div
+                class="flex items-center gap-4 px-4 min-h-[72px] py-3 justify-between hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0 shadow-sm"
+                        data-alt="Diana Prince Profile Avatar"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDb1IL1zXjWDxX6pLum0tcEMV0AqWHT8ghf5X30hCaANrSKhSZ1iQxInB_OGKMmvDfqy-KqFFtj4RmjnVS94pYirsrCf5lObt92gvkQ_LpiXLTBy8wuAoiDKyLCAJePHB7VuBCbZDGhiFOzIdUlIigiKh_a357FUdUtoEz8YuEHSUpWZXZgfrMjSApxU6wc099iZjU120dk4AEBfb5MCPnSUY8f-4SxdrlwUtsjMLTcQm2uesOyXSSuWGYqLXGXx-VhDDtlp7kJBUQ");'>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <p class="text-base font-semibold leading-normal truncate">Diana Prince</p>
+                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                                <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Oct 23</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px] text-slate-400">lock</span>
+                            <p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal truncate">
+                                Encrypted message...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Floating Action Button -->
+        <button
+            class="fixed bottom-6 right-6 lg:right-auto lg:ml-[340px] size-14 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-transform active:scale-95 cursor-pointer z-20">
+            <span class="material-symbols-outlined text-3xl">edit_square</span>
+        </button>
+    </div>
+</body>
+
+</html>
