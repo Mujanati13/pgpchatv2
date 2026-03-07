@@ -38,11 +38,21 @@ const upload = multer({
 });
 
 // POST /api/uploads  — upload an image (authenticated)
-router.post('/', authenticate, upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image provided' });
-  }
-  res.status(201).json({ filename: req.file.filename });
+router.post('/', authenticate, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('[Uploads] Multer error:', err.message);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'File too large (max 10 MB)' });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+    console.log('[Uploads] Saved:', req.file.filename);
+    res.status(201).json({ filename: req.file.filename });
+  });
 });
 
 // GET /api/uploads/:filename  — serve an image (authenticated)
