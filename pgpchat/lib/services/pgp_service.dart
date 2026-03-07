@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:openpgp/openpgp.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
-class PgpService {
+class PgpService extends ChangeNotifier {
   static const String _privateKeyPref = 'pgp_private_key';
   static const String _publicKeyPref = 'pgp_public_key';
   static const String _keyNamePref = 'pgp_key_name';
@@ -64,6 +65,7 @@ class PgpService {
     _privateKey = keyPair.privateKey;
     _publicKey = keyPair.publicKey;
 
+    notifyListeners();
     return keyPair;
   }
 
@@ -77,6 +79,7 @@ class PgpService {
     await prefs.setString(_privateKeyPref, privateKey);
     _publicKey = publicKey;
     _privateKey = privateKey;
+    notifyListeners();
   }
 
   // Encrypt a message with the recipient's public key
@@ -149,28 +152,36 @@ class PgpService {
     await prefs.remove(_keyBitsPref);
     _privateKey = null;
     _publicKey = null;
+    notifyListeners();
   }
 
   // Get fingerprint of a public key (first 40 hex chars of hash)
   String getFingerprint(String publicKeyArmored) {
-    // Extract a display-friendly fingerprint from the key header
-    final lines = publicKeyArmored.split('\n');
-    String keyBody = '';
-    bool inBody = false;
-    for (final line in lines) {
-      if (line.startsWith('-----BEGIN')) {
-        inBody = true;
-        continue;
+    try {
+      // Split on both \n and \r\n to handle all platforms
+      final lines = publicKeyArmored.split(RegExp(r'\r?\n'));
+      String keyBody = '';
+      bool inBody = false;
+      for (final line in lines) {
+        if (line.startsWith('-----BEGIN')) {
+          inBody = true;
+          continue;
+        }
+        if (line.startsWith('-----END')) break;
+        if (inBody && line.trim().isNotEmpty && !line.contains(':')) {
+          keyBody += line.trim();
+        }
       }
-      if (line.startsWith('-----END')) break;
-      if (inBody && line.trim().isNotEmpty && !line.contains(':')) {
-        keyBody += line.trim();
+      if (keyBody.length >= 40) {
+        return keyBody.substring(keyBody.length - 40).toUpperCase();
       }
-    }
-    // Return last 40 chars as a simplified fingerprint display
-    if (keyBody.length >= 40) {
-      return keyBody.substring(keyBody.length - 40).toUpperCase();
-    }
-    return keyBody.toUpperCase();
+      if (keyBody.isNotEmpty) return keyBody.toUpperCase();
+    } catch (_) {}
+    // Fallback: strip armor headers and whitespace, use last 40 chars
+    final raw = publicKeyArmored
+        .replaceAll(RegExp(r'-----[^\n]+-----'), '')
+        .replaceAll(RegExp(r'[\s]'), '');
+    if (raw.length >= 40) return raw.substring(raw.length - 40).toUpperCase();
+    return raw.toUpperCase();
   }
 }

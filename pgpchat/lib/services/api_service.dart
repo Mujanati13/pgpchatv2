@@ -11,6 +11,9 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
+  /// Called whenever any API request receives a 401. Wire this up from AuthProvider.
+  static void Function()? onUnauthorized;
+
   String? _token;
   String? _baseUrl;
 
@@ -60,6 +63,10 @@ class ApiService {
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
+    }
+    if (response.statusCode == 401) {
+      await setToken(null); // clear stored token immediately
+      onUnauthorized?.call();
     }
     throw ApiException(
       statusCode: response.statusCode,
@@ -172,6 +179,10 @@ class ApiService {
 
   Future<Map<String, dynamic>> getConversations() async {
     return get('/messages/conversations');
+  }
+
+  Future<Map<String, dynamic>> clearChat(String otherUserId) async {
+    return delete('/messages/$otherUserId');
   }
 
   // ========== Contacts ==========

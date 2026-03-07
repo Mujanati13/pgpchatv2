@@ -34,11 +34,10 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
       });
     } on ApiException catch (e) {
       setState(() => _isLoading = false);
-      if (e.statusCode == 401) {
-        _handleSessionExpired();
-      } else {
+      if (e.statusCode != 401) {
         _showError('Failed to load sessions: ${e.message}');
       }
+      // 401 is handled globally by ApiService.onUnauthorized
     } catch (_) {
       setState(() => _isLoading = false);
     }
@@ -49,11 +48,10 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
       await _api.terminateSession(sessionId);
       _loadSessions();
     } on ApiException catch (e) {
-      if (e.statusCode == 401) {
-        _handleSessionExpired();
-      } else {
+      if (e.statusCode != 401) {
         _showError('Failed to terminate session: ${e.message}');
       }
+      // 401 is handled globally
     }
   }
 
@@ -89,11 +87,10 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
         await _api.terminateAllSessions();
         _loadSessions();
       } on ApiException catch (e) {
-        if (e.statusCode == 401) {
-          _handleSessionExpired();
-        } else {
+        if (e.statusCode != 401) {
           _showError('Failed to terminate sessions: ${e.message}');
         }
+        // 401 is handled globally
       }
     }
   }
@@ -187,8 +184,7 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
                             currentSession.first['device_name'] as String? ??
                                 'This Device',
                         onLogout: () {
-                          final id = currentSession.first['id']?.toString();
-                          if (id != null) _terminateSession(id);
+                          context.read<AuthProvider>().logout();
                         },
                       ),
                       const SizedBox(height: 24),

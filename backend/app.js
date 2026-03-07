@@ -45,8 +45,8 @@ app.use('/api/auth/register', authLimiter);
 
 // Body parsing
 app.use(logger('dev'));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // API routes
 app.use('/api/auth', authRoutes);

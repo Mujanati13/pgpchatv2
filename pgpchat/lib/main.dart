@@ -9,6 +9,9 @@ import 'screens/login_screen.dart';
 import 'screens/chat_list_screen.dart';
 import 'services/api_service.dart';
 
+/// Global navigator key — used to pop all routes on logout from anywhere.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Always use the production server URL, overwriting any stale cached value
@@ -36,6 +39,7 @@ class PgpChatApp extends StatelessWidget {
       child: MaterialApp(
         title: 'PGP Chat',
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
         theme: AppTheme.darkTheme,
         home: Consumer<AuthProvider>(
           builder: (context, auth, _) {

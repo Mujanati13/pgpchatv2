@@ -55,7 +55,7 @@ async function initializeDatabase() {
         id VARCHAR(36) PRIMARY KEY,
         sender_id VARCHAR(36) NOT NULL,
         recipient_id VARCHAR(36) NOT NULL,
-        encrypted_body TEXT NOT NULL,
+        encrypted_body LONGTEXT NOT NULL,
         signature TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,

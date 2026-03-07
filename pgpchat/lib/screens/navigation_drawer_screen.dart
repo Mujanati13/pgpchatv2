@@ -24,12 +24,25 @@ class AppNavigationDrawer extends StatefulWidget {
 class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
   String _username = 'Anonymous';
   String _fingerprint = '';
+  bool _hasKey = false;
   int _sessionCount = 0;
 
   @override
   void initState() {
     super.initState();
+    // Reload whenever the PGP key changes (generate / import / wipe)
+    PgpService().addListener(_onKeyChanged);
     _loadDynamicData();
+  }
+
+  @override
+  void dispose() {
+    PgpService().removeListener(_onKeyChanged);
+    super.dispose();
+  }
+
+  void _onKeyChanged() {
+    if (mounted) _loadDynamicData();
   }
 
   Future<void> _loadDynamicData() async {
@@ -39,8 +52,10 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
 
     final name = auth.username ?? 'Anonymous';
     String fp = '';
+    bool hasKey = false;
     final pubKey = await pgp.publicKey;
-    if (pubKey != null) {
+    if (pubKey != null && pubKey.isNotEmpty) {
+      hasKey = true;
       fp = pgp.getFingerprint(pubKey);
     }
 
@@ -55,6 +70,7 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
       setState(() {
         _username = name;
         _fingerprint = fp;
+        _hasKey = hasKey;
         _sessionCount = sessions;
       });
     }
@@ -144,8 +160,10 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                         const Icon(Icons.key, size: 14, color: AppColors.slate400),
                         const SizedBox(width: 6),
                         Text(
-                          _fingerprint.isNotEmpty
-                              ? '0x${_fingerprint.substring(0, _fingerprint.length < 8 ? _fingerprint.length : 8)}...'
+                          _hasKey
+                              ? (_fingerprint.isNotEmpty
+                                  ? '0x${_fingerprint.substring(0, _fingerprint.length < 8 ? _fingerprint.length : 8)}...'
+                                  : 'Key available')
                               : 'No key',
                           style: const TextStyle(
                             fontSize: 14,

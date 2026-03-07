@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart' show navigatorKey;
+import '../screens/login_screen.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
 
@@ -19,7 +22,29 @@ class AuthProvider extends ChangeNotifier {
   String? get userId => _userId;
   String? get error => _error;
 
+  // Clears local state and pops all navigation routes to show login screen.
+  void _clearAuthAndNavigate() {
+    _isAuthenticated = false;
+    _username = null;
+    _userId = null;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove('username');
+      prefs.remove('user_id');
+    });
+    notifyListeners();
+    // Pop all pushed routes so login screen becomes visible immediately.
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
+
   Future<void> checkAuth() async {
+    // Register global 401 handler — fires whenever any API call is unauthorized
+    ApiService.onUnauthorized = () {
+      if (_isAuthenticated) _clearAuthAndNavigate();
+    };
+
     final token = await _api.token;
     if (token != null) {
       _isAuthenticated = true;
@@ -92,13 +117,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _api.logout();
     } catch (_) {}
-    _isAuthenticated = false;
-    _username = null;
-    _userId = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('username');
-    await prefs.remove('user_id');
-    notifyListeners();
+    _clearAuthAndNavigate();
   }
 
   Future<bool> resetPgp() async {

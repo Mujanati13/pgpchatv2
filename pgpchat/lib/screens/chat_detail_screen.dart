@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/api_service.dart';
 import '../services/pgp_service.dart';
+import 'auto_delete_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String otherUserId;
@@ -98,9 +102,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
 
     if (widget.otherPublicKey == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Recipient has no public key')),
       );
       return;
@@ -123,15 +128,84 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (success) {
         _messageController.clear();
         if (mounted) {
-          context.read<ChatProvider>().loadMessages(widget.otherUserId);
+          await context.read<ChatProvider>().loadMessages(widget.otherUserId);
+          // Scroll to bottom (index 0 = newest with reverse:true)
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut);
+          }
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Encryption failed: $e')),
-        );
+      messenger.showSnackBar(
+        SnackBar(content: Text('Encryption failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _pickAndSendImage() async {
+    // Capture messenger before any async gap to avoid deactivated-widget error
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (widget.otherPublicKey == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Recipient has no public key')),
+      );
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+      allowCompression: false, // avoid temp-file write that causes Permission denied
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+    if (bytes.lengthInBytes > maxSize) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Image must be smaller than 5 MB')),
+      );
+      return;
+    }
+
+    final ext = (file.extension ?? 'jpg').toLowerCase();
+    final mime = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        }[ext] ??
+        'image/jpeg';
+
+    final b64 = base64Encode(bytes);
+    final payload = '[IMAGE:$mime]$b64';
+
+    try {
+      final encrypted = await _pgp.encrypt(payload, widget.otherPublicKey!);
+      if (!mounted) return;
+      final success = await context.read<ChatProvider>().sendMessage(
+            recipientId: widget.otherUserId,
+            encryptedBody: encrypted,
+          );
+      if (success && mounted) {
+        await context.read<ChatProvider>().loadMessages(widget.otherUserId);
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut);
+        }
       }
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to send image: $e')),
+      );
     }
   }
 
@@ -202,6 +276,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _showChatMenu() {
+    final settings = context.read<SettingsProvider>();
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
@@ -221,6 +296,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
+            // ── Encryption Info ──
             ListTile(
               leading:
                   const Icon(Icons.lock_outline, color: AppColors.primary),
@@ -231,38 +307,139 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       TextStyle(color: AppColors.textSubDark, fontSize: 12)),
               onTap: () {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('End-to-end encrypted with PGP')),
-                );
+                _showEncryptionInfoDialog();
               },
             ),
+            // ── Auto-Delete ──
             ListTile(
               leading:
                   Icon(Icons.timer_outlined, color: AppColors.yellow600),
               title: const Text('Auto-Delete',
                   style: TextStyle(color: AppColors.textMainDark)),
               subtitle: Text(
-                context.read<SettingsProvider>().autoDeleteEnabled
-                    ? 'Active — ${context.read<SettingsProvider>().autoDeleteHours}h'
+                settings.autoDeleteEnabled
+                    ? 'Active — ${settings.autoDeleteHours}h'
                     : 'Disabled',
                 style: const TextStyle(
                     color: AppColors.textSubDark, fontSize: 12),
               ),
-              onTap: () => Navigator.pop(ctx),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AutoDeleteScreen(),
+                  ),
+                );
+              },
             ),
+            // ── Clear Chat ──
             ListTile(
               leading:
                   const Icon(Icons.delete_outline, color: AppColors.error),
               title: const Text('Clear Chat',
                   style: TextStyle(color: AppColors.error)),
-              onTap: () => Navigator.pop(ctx),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmClearChat();
+              },
             ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
+  }
+
+  void _showEncryptionInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.lock, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            const Text('Encryption Info',
+                style: TextStyle(color: AppColors.textMainDark, fontSize: 17)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Messages in this chat are end-to-end encrypted using PGP (Pretty Good Privacy).',
+              style: TextStyle(color: AppColors.textSubDark, fontSize: 14, height: 1.5),
+            ),
+            if (_fingerprint.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text('Recipient Fingerprint:',
+                  style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text(
+                _fingerprint,
+                style: const TextStyle(
+                  color: AppColors.textMainDark,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmClearChat() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear Chat',
+            style: TextStyle(color: AppColors.textMainDark)),
+        content: Text(
+          'Delete all messages with ${widget.otherUsername}? This cannot be undone.',
+          style: const TextStyle(color: AppColors.textSubDark),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSubDark)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear',
+                style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ApiService().clearChat(widget.otherUserId);
+        if (mounted) {
+          context.read<ChatProvider>().clearMessages();
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to clear chat')),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -507,14 +684,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        onPressed: () {},
+                        onPressed: _pickAndSendImage,
                         icon: const Icon(Icons.add, size: 22),
                         color: AppColors.slate400,
                         padding: EdgeInsets.zero,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Text field with mic
+                    // Text field (no mic)
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
@@ -525,40 +702,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                                 AppColors.slate800.withValues(alpha: 0.5),
                           ),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _messageController,
-                                style: const TextStyle(
-                                  color: AppColors.textMainDark,
-                                  fontSize: 15,
-                                ),
-                                maxLines: 4,
-                                minLines: 1,
-                                decoration: InputDecoration(
-                                  hintText: autoDelete
-                                      ? 'Encrypted message...'
-                                      : 'Message',
-                                  hintStyle: const TextStyle(
-                                    color: AppColors.slate500,
-                                    fontSize: 15,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 10),
-                                ),
-                              ),
+                        child: TextField(
+                          controller: _messageController,
+                          style: const TextStyle(
+                            color: AppColors.textMainDark,
+                            fontSize: 15,
+                          ),
+                          maxLines: 4,
+                          minLines: 1,
+                          decoration: InputDecoration(
+                            hintText: autoDelete
+                                ? 'Encrypted message...'
+                                : 'Message',
+                            hintStyle: const TextStyle(
+                              color: AppColors.slate500,
+                              fontSize: 15,
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  right: 8, bottom: 8),
-                              child: Icon(Icons.mic_none,
-                                  size: 22, color: AppColors.slate400),
-                            ),
-                          ],
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                          ),
                         ),
                       ),
                     ),
@@ -918,9 +1082,30 @@ class _MessageBubbleState extends State<_MessageBubble> {
     );
   }
 
-  // ─── Bubble content (decrypted text / loading / tap-to-decrypt) ───
+  // ─── Bubble content (decrypted text / image / loading / tap-to-decrypt) ───
   Widget _buildContent(bool isMine) {
     if (_decryptedText != null) {
+      // Detect image payload: [IMAGE:mime/type]base64data
+      if (_decryptedText!.startsWith('[IMAGE:')) {
+        final closeBracket = _decryptedText!.indexOf(']');
+        if (closeBracket > 0) {
+          final b64 = _decryptedText!.substring(closeBracket + 1);
+          try {
+            final bytes = base64Decode(b64);
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(
+                bytes,
+                fit: BoxFit.cover,
+                width: 220,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => const Text('Image error',
+                    style: TextStyle(color: Colors.white54)),
+              ),
+            );
+          } catch (_) {}
+        }
+      }
       return Text(
         _decryptedText!,
         style: TextStyle(

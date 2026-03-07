@@ -155,4 +155,21 @@ router.get('/conversations', async (req, res) => {
   }
 });
 
+// DELETE /api/messages/:contactId  — clear chat with a specific user
+router.delete('/:contactId', async (req, res) => {
+  try {
+    const contactId = req.params.contactId;
+    await pool.execute(
+      `DELETE FROM messages
+       WHERE (sender_id = ? AND recipient_id = ?)
+          OR (sender_id = ? AND recipient_id = ?)`,
+      [req.userId, contactId, contactId, req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Messages] Clear chat error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
