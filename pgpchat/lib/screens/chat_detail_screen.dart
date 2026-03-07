@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/chat_provider.dart';
@@ -175,21 +177,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
 
     final ext = (file.extension ?? 'jpg').toLowerCase();
-    final mime = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
-        }[ext] ??
-        'image/jpeg';
-
-    final b64 = base64Encode(bytes);
-    final payload = '[IMAGE:$mime]$b64';
+    final filename = file.name;
 
     try {
+      // 1. Upload image file to server
+      final serverFilename = await ApiService().uploadImage(bytes, filename);
+
+      // 2. Encrypt only the small reference string
+      final payload = '[IMAGE:$serverFilename]';
       final encrypted = await _pgp.encrypt(payload, widget.otherPublicKey!);
       if (!mounted) return;
+
+      // 3. Send encrypted reference as message
       final success = await context.read<ChatProvider>().sendMessage(
             recipientId: widget.otherUserId,
             encryptedBody: encrypted,
@@ -1085,25 +1084,12 @@ class _MessageBubbleState extends State<_MessageBubble> {
   // ─── Bubble content (decrypted text / image / loading / tap-to-decrypt) ───
   Widget _buildContent(bool isMine) {
     if (_decryptedText != null) {
-      // Detect image payload: [IMAGE:mime/type]base64data
+      // Detect image payload: [IMAGE:filename]
       if (_decryptedText!.startsWith('[IMAGE:')) {
         final closeBracket = _decryptedText!.indexOf(']');
         if (closeBracket > 0) {
-          final b64 = _decryptedText!.substring(closeBracket + 1);
-          try {
-            final bytes = base64Decode(b64);
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.memory(
-                bytes,
-                fit: BoxFit.cover,
-                width: 220,
-                gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const Text('Image error',
-                    style: TextStyle(color: Colors.white54)),
-              ),
-            );
-          } catch (_) {}
+          final filename = _decryptedText!.substring(7, closeBracket);
+          return _NetworkImage(filename: filename);
         }
       }
       return Text(
@@ -1184,6 +1170,91 @@ class _MessageBubbleState extends State<_MessageBubble> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Authenticated network image widget ───
+class _NetworkImage extends StatefulWidget {
+  final String filename;
+  const _NetworkImage({required this.filename});
+
+  @override
+  State<_NetworkImage> createState() => _NetworkImageState();
+}
+
+class _NetworkImageState extends State<_NetworkImage> {
+  Uint8List? _bytes;
+  bool _loading = true;
+  bool _error = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchImage();
+  }
+
+  Future<void> _fetchImage() async {
+    try {
+      final api = ApiService();
+      final url = await api.getImageUrl(widget.filename);
+      final headers = await api.getAuthHeaders();
+      final response = await http.get(Uri.parse(url), headers: headers);
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        setState(() {
+          _bytes = response.bodyBytes;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = true;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        width: 220,
+        height: 150,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+    if (_error || _bytes == null) {
+      return const SizedBox(
+        width: 220,
+        height: 60,
+        child: Center(
+          child: Text('Image unavailable',
+              style: TextStyle(color: Colors.white54, fontSize: 13)),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.memory(
+        _bytes!,
+        fit: BoxFit.cover,
+        width: 220,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => const Text('Image error',
+            style: TextStyle(color: Colors.white54)),
       ),
     );
   }

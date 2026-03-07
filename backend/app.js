@@ -13,6 +13,7 @@ const contactsRoutes = require('./routes/contacts');
 const sessionsRoutes = require('./routes/sessions');
 const settingsRoutes = require('./routes/settings');
 const usersRoutes = require('./routes/users');
+const uploadsRoutes = require('./routes/uploads');
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/contacts', contactsRoutes);
 app.use('/api/sessions', sessionsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/uploads', uploadsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

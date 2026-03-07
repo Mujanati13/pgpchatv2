@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -183,6 +184,40 @@ class ApiService {
 
   Future<Map<String, dynamic>> clearChat(String otherUserId) async {
     return delete('/messages/$otherUserId');
+  }
+
+  // ========== Uploads ==========
+
+  Future<String> uploadImage(Uint8List bytes, String filename) async {
+    final url = Uri.parse('${await baseUrl}/uploads');
+    final request = http.MultipartRequest('POST', url);
+    final t = await token;
+    if (t != null) request.headers['Authorization'] = 'Bearer $t';
+    request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode == 401) {
+      await setToken(null);
+      onUnauthorized?.call();
+      throw const ApiException(statusCode: 401, message: 'Unauthorized');
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: body['error'] as String? ?? 'Upload failed',
+      );
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['filename'] as String;
+  }
+
+  Future<String> getImageUrl(String filename) async {
+    return '${await baseUrl}/uploads/$filename';
+  }
+
+  Future<Map<String, String>> getAuthHeaders() async {
+    return _headers();
   }
 
   // ========== Contacts ==========
