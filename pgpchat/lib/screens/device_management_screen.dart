@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
 class DeviceManagementScreen extends StatefulWidget {
@@ -30,14 +32,29 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
             result['sessions'] as List? ?? []);
         _isLoading = false;
       });
+    } on ApiException catch (e) {
+      setState(() => _isLoading = false);
+      if (e.statusCode == 401) {
+        _handleSessionExpired();
+      } else {
+        _showError('Failed to load sessions: ${e.message}');
+      }
     } catch (_) {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _terminateSession(String sessionId) async {
-    await _api.terminateSession(sessionId);
-    _loadSessions();
+    try {
+      await _api.terminateSession(sessionId);
+      _loadSessions();
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        _handleSessionExpired();
+      } else {
+        _showError('Failed to terminate session: ${e.message}');
+      }
+    }
   }
 
   Future<void> _terminateAll() async {
@@ -68,9 +85,32 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
     );
 
     if (confirmed == true) {
-      await _api.terminateAllSessions();
-      _loadSessions();
+      try {
+        await _api.terminateAllSessions();
+        _loadSessions();
+      } on ApiException catch (e) {
+        if (e.statusCode == 401) {
+          _handleSessionExpired();
+        } else {
+          _showError('Failed to terminate sessions: ${e.message}');
+        }
+      }
     }
+  }
+
+  void _handleSessionExpired() {
+    if (!mounted) return;
+    context.read<AuthProvider>().logout();
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+      ),
+    );
   }
 
   @override
