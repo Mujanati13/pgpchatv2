@@ -29,12 +29,8 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
-  fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'));
-    }
-    cb(null, true);
-  },
+  // Extension check in filename() callback is sufficient; skip mime filter
+  // because some HTTP clients send application/octet-stream for image files.
 });
 
 // POST /api/uploads  — upload an image (authenticated)

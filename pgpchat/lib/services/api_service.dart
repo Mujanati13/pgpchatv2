@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -193,7 +194,17 @@ class ApiService {
     final request = http.MultipartRequest('POST', url);
     final t = await token;
     if (t != null) request.headers['Authorization'] = 'Bearer $t';
-    request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
+    // Derive MIME type from filename extension so multer accepts it
+    final ext = filename.split('.').last.toLowerCase();
+    final mime = <String, String>{
+      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+      'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+    }[ext] ?? 'image/jpeg';
+    request.files.add(http.MultipartFile.fromBytes(
+      'image', bytes,
+      filename: filename,
+      contentType: MediaType.parse(mime),
+    ));
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 401) {
