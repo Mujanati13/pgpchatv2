@@ -88,6 +88,16 @@ async function initializeDatabase() {
     `);
 
     console.log('[DB] All tables initialized successfully');
+
+    // Migrations — safe to run on every startup
+    try {
+      await conn.execute(
+        `ALTER TABLE contacts ADD COLUMN last_read_at TIMESTAMP NULL DEFAULT NULL`
+      );
+      console.log('[DB] Migration: added last_read_at to contacts');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e; // ignore "column already exists"
+    }
   } finally {
     conn.release();
   }

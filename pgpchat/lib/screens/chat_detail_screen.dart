@@ -30,6 +30,8 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _disposed = false;
+  bool _isUploadingImage = false;
+  bool _isClearingChat = false;
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _pgp = PgpService();
@@ -43,6 +45,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ChatProvider>().startMessagePolling(widget.otherUserId);
+      context.read<ChatProvider>().markRead(widget.otherUserId);
       _loadFingerprint();
       _startCountdown();
     });
@@ -179,6 +182,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final ext = (file.extension ?? 'jpg').toLowerCase();
     final filename = file.name;
 
+    setState(() => _isUploadingImage = true);
+    // Scroll to bottom so the skeleton is visible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut);
+      }
+    });
+
     try {
       // 1. Upload image file to server
       final serverFilename = await ApiService().uploadImage(bytes, filename);
@@ -205,6 +218,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       messenger.showSnackBar(
         SnackBar(content: Text('Failed to send image: $e')),
       );
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
     }
   }
 
@@ -426,6 +441,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
 
     if (confirmed == true && mounted) {
+      setState(() => _isClearingChat = true);
       try {
         await ApiService().clearChat(widget.otherUserId);
         if (mounted) {
@@ -437,6 +453,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             const SnackBar(content: Text('Failed to clear chat')),
           );
         }
+      } finally {
+        if (mounted) setState(() => _isClearingChat = false);
       }
     }
   }
@@ -451,7 +469,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
+      body: Stack(
+        children: [
+          SafeArea(
         child: Column(
           children: [
             // ─── Custom App Bar ───
@@ -608,13 +628,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           reverse: true,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
-                          itemCount: chat.messages.length + 1,
+                          itemCount: chat.messages.length + 1 + (_isUploadingImage ? 1 : 0),
                           itemBuilder: (context, index) {
+                            // Skeleton bubble at index 0 when uploading
+                            if (_isUploadingImage && index == 0) {
+                              return const _ImageUploadSkeleton();
+                            }
+                            final msgIndex = _isUploadingImage ? index - 1 : index;
                             // "Today" divider at end (top visually)
-                            if (index == chat.messages.length) {
+                            if (msgIndex == chat.messages.length) {
                               return _buildDateDivider('Today');
                             }
-                            final msg = chat.messages[index];
+                            final msg = chat.messages[msgIndex];
                             final isMine =
                                 msg['sender_id'] != widget.otherUserId;
                             return _MessageBubble(
@@ -748,6 +773,37 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
           ],
         ),
+      ),
+          // ─── Clear-chat loading overlay ───
+          if (_isClearingChat)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDark,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: AppColors.primary),
+                      SizedBox(height: 16),
+                      Text(
+                        'Clearing chat…',
+                        style: TextStyle(
+                          color: AppColors.textMainDark,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1255,6 +1311,88 @@ class _NetworkImageState extends State<_NetworkImage> {
         gaplessPlayback: true,
         errorBuilder: (_, __, ___) => const Text('Image error',
             style: TextStyle(color: Colors.white54)),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton bubble shown while image is uploading ───
+class _ImageUploadSkeleton extends StatefulWidget {
+  const _ImageUploadSkeleton();
+
+  @override
+  State<_ImageUploadSkeleton> createState() => _ImageUploadSkeletonState();
+}
+
+class _ImageUploadSkeletonState extends State<_ImageUploadSkeleton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _shimmer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _shimmer = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4, left: 48),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Shimmer image placeholder
+          AnimatedBuilder(
+            animation: _shimmer,
+            builder: (_, __) => Container(
+              width: 220,
+              height: 150,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: AppColors.primary.withValues(alpha: _shimmer.value),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.image_outlined,
+                      size: 32, color: Colors.white.withValues(alpha: 0.6)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 80,
+                    height: 3,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.white24,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Uploading…',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }

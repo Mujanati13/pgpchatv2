@@ -387,19 +387,20 @@ class _ChatItem extends StatelessWidget {
               if (unreadCount > 0)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                  decoration: BoxDecoration(
                     color: AppColors.primary,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Text(
-                      '$unreadCount',
+                      unreadCount > 99 ? '99+' : '$unreadCount',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
+                        height: 1,
                       ),
                     ),
                   ),

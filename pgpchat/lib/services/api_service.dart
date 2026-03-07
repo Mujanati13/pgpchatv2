@@ -187,6 +187,12 @@ class ApiService {
     return delete('/messages/$otherUserId');
   }
 
+  Future<void> markConversationRead(String otherUserId) async {
+    try {
+      await put('/messages/$otherUserId/read');
+    } catch (_) {} // best-effort, don't block the UI
+  }
+
   // ========== Uploads ==========
 
   Future<String> uploadImage(Uint8List bytes, String filename) async {

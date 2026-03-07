@@ -152,4 +152,16 @@ class ChatProvider extends ChangeNotifier {
     _messages = [];
     notifyListeners();
   }
+
+  void markRead(String otherUserId) {
+    final idx = _conversations.indexWhere(
+        (c) => c['other_user_id']?.toString() == otherUserId);
+    if (idx != -1 && (_conversations[idx]['unread_count'] ?? 0) != 0) {
+      _conversations[idx] = Map<String, dynamic>.from(_conversations[idx])
+        ..['unread_count'] = 0;
+      notifyListeners();
+    }
+    // Persist to server (best-effort)
+    _api.markConversationRead(otherUserId);
+  }
 }

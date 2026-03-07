@@ -125,15 +125,16 @@ router.get('/conversations', async (req, res) => {
           [req.userId, row.contact_id, row.contact_id, req.userId]
         );
 
-        // Count unread (messages from contact, not from self)
+        // Count unread (messages from contact, not from self, since last read)
         const [unread] = await pool.execute(
           `SELECT COUNT(*) AS cnt FROM messages
            WHERE sender_id = ? AND recipient_id = ?
            AND created_at > COALESCE(
-             (SELECT last_active FROM sessions WHERE user_id = ? ORDER BY last_active DESC LIMIT 1),
+             (SELECT last_read_at FROM contacts
+              WHERE owner_id = ? AND contact_user_id = ?),
              '2000-01-01'
            )`,
-          [row.contact_id, req.userId, req.userId]
+          [row.contact_id, req.userId, req.userId, row.contact_id]
         );
 
         enriched.push({
@@ -151,6 +152,24 @@ router.get('/conversations', async (req, res) => {
     res.json({ conversations: enriched });
   } catch (err) {
     console.error('[Messages] Conversations error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/messages/:contactId/read  — mark conversation as read
+router.put('/:contactId/read', async (req, res) => {
+  try {
+    const contactId = req.params.contactId;
+    // Upsert the last_read_at timestamp for this contact pair
+    await pool.execute(
+      `INSERT INTO contacts (id, owner_id, contact_user_id, last_read_at)
+       VALUES (UUID(), ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE last_read_at = NOW()`,
+      [req.userId, contactId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Messages] Mark-read error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
