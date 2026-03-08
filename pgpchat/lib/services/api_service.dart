@@ -155,6 +155,19 @@ class ApiService {
     return post('/auth/reset-pgp');
   }
 
+  Future<Map<String, dynamic>> requestRecovery(String username) async {
+    return post('/auth/recover-request', body: {'username': username});
+  }
+
+  Future<Map<String, dynamic>> confirmRecovery(
+      String username, String challenge, String newPassword) async {
+    return post('/auth/recover-confirm', body: {
+      'username': username,
+      'challenge': challenge,
+      'newPassword': newPassword,
+    });
+  }
+
   // ========== Messages ==========
 
   Future<Map<String, dynamic>> getMessages(String otherUserId,

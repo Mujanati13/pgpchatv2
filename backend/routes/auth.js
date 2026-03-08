@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 const { pool } = require('../database');
@@ -160,6 +161,105 @@ router.post('/reset-pgp', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   } finally {
     conn.release();
+  }
+});
+
+// POST /api/auth/recover-request  — Step 1: get PGP-encrypted challenge
+router.post('/recover-request', async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    const [users] = await pool.execute(
+      'SELECT id, public_key FROM users WHERE username = ?',
+      [username]
+    );
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+    if (!user.public_key) {
+      return res.status(400).json({ error: 'No PGP key registered for this account. Recovery not possible.' });
+    }
+
+    // Generate random challenge
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(token, 10);
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store hashed token
+    await pool.execute(
+      'UPDATE users SET recovery_token_hash = ?, recovery_token_expires = ? WHERE id = ?',
+      [tokenHash, expires, user.id]
+    );
+
+    // Encrypt challenge with user's PGP public key
+    const openpgp = await import('openpgp');
+    const publicKey = await openpgp.readKey({ armoredKey: user.public_key });
+    const encrypted = await openpgp.encrypt({
+      message: await openpgp.createMessage({ text: token }),
+      encryptionKeys: publicKey,
+    });
+
+    res.json({ encryptedChallenge: encrypted });
+  } catch (err) {
+    console.error('[Auth] Recovery request error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/recover-confirm  — Step 2: verify decrypted challenge & reset password
+router.post('/recover-confirm', async (req, res) => {
+  try {
+    const { username, challenge, newPassword } = req.body;
+    if (!username || !challenge || !newPassword) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const [users] = await pool.execute(
+      'SELECT id, recovery_token_hash, recovery_token_expires FROM users WHERE username = ?',
+      [username]
+    );
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+    if (!user.recovery_token_hash || !user.recovery_token_expires) {
+      return res.status(400).json({ error: 'No recovery request found. Please request a new one.' });
+    }
+    if (new Date() > new Date(user.recovery_token_expires)) {
+      // Clear expired token
+      await pool.execute(
+        'UPDATE users SET recovery_token_hash = NULL, recovery_token_expires = NULL WHERE id = ?',
+        [user.id]
+      );
+      return res.status(400).json({ error: 'Recovery token has expired. Please request a new one.' });
+    }
+
+    const valid = await bcrypt.compare(challenge, user.recovery_token_hash);
+    if (!valid) {
+      return res.status(400).json({ error: 'Invalid recovery token' });
+    }
+
+    // Reset password & clear recovery token & terminate all sessions
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await pool.execute(
+      'UPDATE users SET password_hash = ?, recovery_token_hash = NULL, recovery_token_expires = NULL WHERE id = ?',
+      [passwordHash, user.id]
+    );
+    await pool.execute('DELETE FROM sessions WHERE user_id = ?', [user.id]);
+
+    res.json({ success: true, message: 'Password has been reset. Please login with your new password.' });
+  } catch (err) {
+    console.error('[Auth] Recovery confirm error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

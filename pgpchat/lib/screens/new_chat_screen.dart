@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../widgets/responsive_center.dart';
 import 'chat_detail_screen.dart';
 
 class NewChatScreen extends StatefulWidget {
@@ -77,7 +78,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
           ),
         ),
       ),
-      body: Column(
+      body: ResponsiveScaffoldBody(
+        child: Column(
         children: [
           // Search field
           Padding(
@@ -191,6 +193,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                       ),
           ),
         ],
+      ),
       ),
     );
   }

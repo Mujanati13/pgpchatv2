@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/responsive_center.dart';
 import 'keygen_step3_screen.dart';
 
 class KeygenStep2Screen extends StatefulWidget {
@@ -32,7 +33,8 @@ class _KeygenStep2ScreenState extends State<KeygenStep2Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Column(
           children: [
             // Header with progress
@@ -322,6 +324,7 @@ class _KeygenStep2ScreenState extends State<KeygenStep2Screen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

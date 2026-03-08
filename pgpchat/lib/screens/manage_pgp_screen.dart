@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../theme/app_theme.dart';
+import '../widgets/responsive_center.dart';
 import '../services/pgp_service.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
@@ -324,7 +325,8 @@ class ManagePgpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Column(
           children: [
             // Header
@@ -505,6 +507,7 @@ class ManagePgpScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

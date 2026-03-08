@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/responsive_center.dart';
 import 'navigation_drawer_screen.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
@@ -46,7 +47,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       drawer: const AppNavigationDrawer(),
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Column(
           children: [
             // Top App Bar
@@ -209,6 +211,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
           ],
         ),
+      ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

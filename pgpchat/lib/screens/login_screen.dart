@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/responsive_center.dart';
 import 'chat_list_screen.dart';
 import 'keygen_step1_screen.dart';
+import 'recover_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -89,7 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -219,6 +222,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // Forgot password (login mode only)
+                if (_isLogin)
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const RecoverScreen()),
+                    ),
+                    child: const Text(
+                      'Forgot password? Recover with PGP key',
+                      style: TextStyle(
+                        color: AppColors.textSubDark,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+
                 // Toggle login/register
                 TextButton(
                   onPressed: () => setState(() => _isLogin = !_isLogin),
@@ -236,6 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

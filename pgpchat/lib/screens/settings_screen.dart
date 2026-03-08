@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../widgets/responsive_center.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,35 +11,16 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _urlController = TextEditingController();
   final _api = ApiService();
 
   @override
   void initState() {
     super.initState();
-    _loadUrl();
-  }
-
-  Future<void> _loadUrl() async {
-    final url = await _api.baseUrl;
-    _urlController.text = url;
   }
 
   @override
   void dispose() {
-    _urlController.dispose();
     super.dispose();
-  }
-
-  Future<void> _saveUrl() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) return;
-    await _api.setBaseUrl(url);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Server URL updated')),
-      );
-    }
   }
 
   @override
@@ -51,21 +33,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ListView(
+      body: ResponsiveScaffoldBody(
+        child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // Server section
-          const Text(
-            'SERVER',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSubDark,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 32),
-
           // About section
           const Text(
             'ABOUT',
@@ -97,6 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

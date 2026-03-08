@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/responsive_center.dart';
 import '../services/pgp_service.dart';
 import 'chat_list_screen.dart';
 
@@ -16,7 +17,8 @@ class KeygenSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _successBgDark,
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Column(
           children: [
             // Top App Bar
@@ -247,6 +249,7 @@ class KeygenSuccessScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

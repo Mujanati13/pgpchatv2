@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/responsive_center.dart';
 import '../providers/settings_provider.dart';
 
 class AutoDeleteScreen extends StatefulWidget {
@@ -50,7 +51,8 @@ class _AutoDeleteScreenState extends State<AutoDeleteScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Stack(
           children: [
             Column(
@@ -402,6 +404,7 @@ class _AutoDeleteScreenState extends State<AutoDeleteScreen> {
               ),
           ],
         ),
+      ),
       ),
     );
   }

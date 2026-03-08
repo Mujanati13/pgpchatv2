@@ -10,6 +10,7 @@ import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
+import '../widgets/responsive_center.dart';
 import 'auto_delete_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
@@ -469,7 +470,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: Stack(
+      body: ResponsiveScaffoldBody(
+        child: Stack(
         children: [
           SafeArea(
         child: Column(
@@ -804,6 +806,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

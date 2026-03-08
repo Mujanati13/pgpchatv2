@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/responsive_center.dart';
 import 'keygen_step2_screen.dart';
 
 class KeygenStep1Screen extends StatefulWidget {
@@ -24,7 +25,8 @@ class _KeygenStep1ScreenState extends State<KeygenStep1Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Column(
           children: [
             // Top App Bar
@@ -316,6 +318,7 @@ class _KeygenStep1ScreenState extends State<KeygenStep1Screen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

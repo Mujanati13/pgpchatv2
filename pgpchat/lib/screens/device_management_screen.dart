@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/responsive_center.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
@@ -119,7 +120,8 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
+      body: ResponsiveScaffoldBody(
+        child: SafeArea(
         child: Column(
           children: [
             // Top App Bar
@@ -285,6 +287,7 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

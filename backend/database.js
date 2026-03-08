@@ -96,7 +96,25 @@ async function initializeDatabase() {
       );
       console.log('[DB] Migration: added last_read_at to contacts');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') throw e; // ignore "column already exists"
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
+
+    try {
+      await conn.execute(
+        `ALTER TABLE users ADD COLUMN recovery_token_hash VARCHAR(255) NULL DEFAULT NULL`
+      );
+      console.log('[DB] Migration: added recovery_token_hash to users');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
+
+    try {
+      await conn.execute(
+        `ALTER TABLE users ADD COLUMN recovery_token_expires TIMESTAMP NULL DEFAULT NULL`
+      );
+      console.log('[DB] Migration: added recovery_token_expires to users');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     }
   } finally {
     conn.release();

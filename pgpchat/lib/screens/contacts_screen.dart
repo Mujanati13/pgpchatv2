@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../widgets/responsive_center.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -108,7 +109,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: ResponsiveScaffoldBody(
+        child: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary))
           : _contacts.isEmpty
@@ -251,6 +253,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
                     },
                   ),
                 ),
+      ),
     );
   }
 }
