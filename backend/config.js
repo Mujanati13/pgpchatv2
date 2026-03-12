@@ -19,6 +19,10 @@ module.exports = {
   autoDelete: {
     defaultHours: 24,
   },
+  // Zero-knowledge: wipe IP logs every N minutes
+  logWipe: {
+    intervalMinutes: 60,
+  },
   // Backup sync interval in seconds
   backup: {
     syncIntervalSeconds: 60,
