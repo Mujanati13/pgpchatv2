@@ -1,6 +1,5 @@
 const cron = require('node-cron');
 const { pool } = require('../database');
-const config = require('../config');
 
 function startCronJobs() {
   // ========================================
@@ -24,19 +23,6 @@ function startCronJobs() {
       console.log(`[Cron] Auto-delete scan complete for ${users.length} users`);
     } catch (err) {
       console.error('[Cron] Auto-delete error:', err.message);
-    }
-  });
-
-  // ========================================
-  // Zero-Knowledge: Wipe IP logs every 60 minutes
-  // ========================================
-  const logWipeInterval = config.logWipe.intervalMinutes;
-  cron.schedule(`*/${logWipeInterval} * * * *`, async () => {
-    try {
-      const [result] = await pool.execute('DELETE FROM ip_logs');
-      console.log(`[Cron] IP logs wiped: ${result.affectedRows} entries removed`);
-    } catch (err) {
-      console.error('[Cron] IP log wipe error:', err.message);
     }
   });
 

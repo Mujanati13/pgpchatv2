@@ -10,6 +10,7 @@ import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
+import '../services/screenshot_service.dart';
 import '../widgets/responsive_center.dart';
 import 'auto_delete_screen.dart';
 
@@ -36,6 +37,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _pgp = PgpService();
+  final _screenshotService = ScreenshotService();
   String? _passphrase;
   String _fingerprint = '';
   Timer? _countdownTimer;
@@ -50,6 +52,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       _loadFingerprint();
       _startCountdown();
     });
+    // Listen for screenshot attempts (iOS callback; Android uses FLAG_SECURE)
+    _screenshotService.startListening(onDetected: _onScreenshotDetected);
   }
 
   Future<void> _loadFingerprint() async {
@@ -98,11 +102,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _disposed = true;
+    _screenshotService.stopListening();
     context.read<ChatProvider>().stopMessagePolling();
     _countdownTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScreenshotDetected() {
+    if (_disposed) return;
+    // Send screenshot alert to the other user in this chat
+    ApiService().sendScreenshotAlert(widget.otherUserId);
+    // Reload messages so the alert appears in the chat
+    if (mounted) {
+      context.read<ChatProvider>().loadMessages(widget.otherUserId);
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -231,9 +246,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (_passphrase == null) return null; // user cancelled
     }
     try {
-      return await _pgp.decrypt(encryptedBody, _passphrase!);
-    } catch (_) {
-      _passphrase = null; // clear bad passphrase so next tap re-prompts
+      final result = await _pgp.decrypt(encryptedBody.trim(), _passphrase!);
+      return result.trim();
+    } catch (e) {
+      debugPrint('[Decrypt] Error: $e');
+      _passphrase = null; // clear so next tap re-prompts
       return '\x00FAIL';
     }
   }
@@ -270,7 +287,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 style: TextStyle(color: AppColors.textSubDark)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('Unlock',
                 style: TextStyle(color: AppColors.primary)),
           ),
@@ -644,6 +661,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             final msg = chat.messages[msgIndex];
                             final isMine =
                                 msg['sender_id'] != widget.otherUserId;
+
+                            // Screenshot alert — render as system message
+                            if (msg['signature'] == '__SCREENSHOT_ALERT__') {
+                              return _ScreenshotAlertBubble(
+                                text: msg['encrypted_body'] as String? ?? '',
+                                timestamp: msg['created_at'] as String? ?? '',
+                              );
+                            }
+
                             return _MessageBubble(
                               encryptedBody:
                                   msg['encrypted_body'] as String? ?? '',
@@ -1396,6 +1422,79 @@ class _ImageUploadSkeletonState extends State<_ImageUploadSkeleton>
           ),
           const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Screenshot alert system message (centered) ───
+class _ScreenshotAlertBubble extends StatelessWidget {
+  final String text;
+  final String timestamp;
+
+  const _ScreenshotAlertBubble({
+    required this.text,
+    required this.timestamp,
+  });
+
+  String _formatTime(String ts) {
+    try {
+      final dt = DateTime.parse(ts).toLocal();
+      final h = dt.hour;
+      final m = dt.minute.toString().padLeft(2, '0');
+      final ampm = h >= 12 ? 'PM' : 'AM';
+      final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+      return '$h12:$m $ampm';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 24),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0x33EF4444), // translucent red
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0x55EF4444),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  size: 16, color: Color(0xFFEF4444)),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFEF4444),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              if (_formatTime(timestamp).isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  _formatTime(timestamp),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0x99EF4444),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

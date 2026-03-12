@@ -4,9 +4,13 @@ import '../theme/app_theme.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/responsive_center.dart';
+import '../widgets/app_nav_sidebar.dart';
 import 'navigation_drawer_screen.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
+
+// Wide-screen breakpoint: show permanent sidebar instead of drawer
+const double _kSidebarBreakpoint = 860;
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -44,18 +48,66 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget build(BuildContext context) {
     final chat = context.watch<ChatProvider>();
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= _kSidebarBreakpoint;
+        return _buildScaffold(context, chat, isWide);
+      },
+    );
+  }
+
+  Widget _buildScaffold(
+      BuildContext context, dynamic chat, bool isWide) {
+    final chatBody = _buildChatColumn(context, chat, isWide);
+
+    if (isWide) {
+      // Desktop / web: permanent sidebar + content side by side
+      return Scaffold(
+        backgroundColor: AppColors.backgroundDark,
+        body: Row(
+          children: [
+            const AppNavSidebar(),
+            Expanded(child: chatBody),
+          ],
+        ),
+        floatingActionButton: _buildFab(context),
+      );
+    }
+
+    // Mobile: slide-out drawer
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       drawer: const AppNavigationDrawer(),
-      body: ResponsiveScaffoldBody(
-        child: SafeArea(
-        child: Column(
-          children: [
-            // Top App Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-              child: Row(
-                children: [
+      body: ResponsiveScaffoldBody(child: chatBody),
+      floatingActionButton: _buildFab(context),
+    );
+  }
+
+  FloatingActionButton _buildFab(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NewChatScreen()),
+        );
+      },
+      backgroundColor: AppColors.primary,
+      elevation: 6,
+      child: const Icon(Icons.edit_square, color: Colors.white, size: 28),
+    );
+  }
+
+  Widget _buildChatColumn(
+      BuildContext context, dynamic chat, bool isWide) {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Top App Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+            child: Row(
+              children: [
+                if (!isWide)
                   Builder(
                     builder: (context) => IconButton(
                       onPressed: () => Scaffold.of(context).openDrawer(),
@@ -63,36 +115,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       color: AppColors.slate300,
                       splashRadius: 24,
                     ),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Secure Chats',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.015,
-                        color: AppColors.textMainDark,
-                      ),
+                  )
+                else
+                  const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Secure Chats',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.015,
+                      color: AppColors.textMainDark,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _showSearch = !_showSearch;
-                        if (!_showSearch) {
-                          _searchQuery = '';
-                          _searchController.clear();
-                        }
-                      });
-                    },
-                    icon: Icon(_showSearch ? Icons.close : Icons.search, size: 24),
-                    color: AppColors.slate300,
-                    splashRadius: 24,
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showSearch = !_showSearch;
+                      if (!_showSearch) {
+                        _searchQuery = '';
+                        _searchController.clear();
+                      }
+                    });
+                  },
+                  icon: Icon(_showSearch ? Icons.close : Icons.search,
+                      size: 24),
+                  color: AppColors.slate300,
+                  splashRadius: 24,
+                ),
+              ],
             ),
+          ),
             // Chat List
             if (_showSearch)
               Padding(
@@ -211,20 +266,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
           ],
         ),
-      ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const NewChatScreen()),
-          );
-        },
-        backgroundColor: AppColors.primary,
-        elevation: 6,
-        child: const Icon(Icons.edit_square, color: Colors.white, size: 28),
-      ),
-    );
+      );
   }
 
   String _formatConvTime(String? timestamp) {

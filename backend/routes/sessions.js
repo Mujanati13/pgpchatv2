@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   try {
     const [sessions] = await pool.execute(
-      `SELECT id, device_name, device_type, location, last_active, created_at
+      `SELECT id, device_name, device_type, last_active, created_at
        FROM sessions
        WHERE user_id = ?
        ORDER BY last_active DESC`,

@@ -74,11 +74,11 @@ class _RecoverScreenState extends State<RecoverScreen> {
 
     setState(() { _loading = true; _error = null; });
     try {
-      _decryptedToken = await _pgp.decrypt(_encryptedChallenge!, passphrase);
+      _decryptedToken = (await _pgp.decrypt(_encryptedChallenge!, passphrase)).trim();
       setState(() { _step = 2; _loading = false; });
     } catch (e) {
       setState(() {
-        _error = 'Decryption failed. Check your passphrase.';
+        _error = 'Decryption error: ${e.toString()}';
         _loading = false;
       });
     }

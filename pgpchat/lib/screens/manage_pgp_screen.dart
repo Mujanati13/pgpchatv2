@@ -9,6 +9,10 @@ import '../services/pgp_service.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import 'keygen_step1_screen.dart';
+import 'pgp_encrypt_screen.dart';
+import 'pgp_decrypt_screen.dart';
+import 'pgp_sign_screen.dart';
+import 'pgp_verify_screen.dart';
 
 class ManagePgpScreen extends StatelessWidget {
   const ManagePgpScreen({super.key});
@@ -108,219 +112,6 @@ class ManagePgpScreen extends StatelessWidget {
     }
   }
 
-  void _showEncryptDialog(BuildContext context) {
-    final messageCtrl = TextEditingController();
-    final pubKeyCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Encrypt Message',
-            style: TextStyle(color: AppColors.textMainDark)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: pubKeyCtrl,
-                maxLines: 3,
-                style: const TextStyle(color: AppColors.textMainDark, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Paste recipient public key',
-                  hintStyle: const TextStyle(color: AppColors.textSubDark),
-                  filled: true,
-                  fillColor: AppColors.backgroundDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageCtrl,
-                maxLines: 3,
-                style: const TextStyle(color: AppColors.textMainDark, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Message to encrypt',
-                  hintStyle: const TextStyle(color: AppColors.textSubDark),
-                  filled: true,
-                  fillColor: AppColors.backgroundDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSubDark)),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (messageCtrl.text.isEmpty || pubKeyCtrl.text.isEmpty) return;
-              final messenger = ScaffoldMessenger.of(context);
-              try {
-                final encrypted = await PgpService().encrypt(messageCtrl.text, pubKeyCtrl.text);
-                Navigator.pop(ctx);
-                Clipboard.setData(ClipboardData(text: encrypted));
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Encrypted text copied to clipboard')),
-                );
-              } catch (e) {
-                messenger.showSnackBar(
-                  SnackBar(content: Text('Encryption failed: $e')),
-                );
-              }
-            },
-            child: const Text('Encrypt', style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDecryptDialog(BuildContext context) {
-    final messageCtrl = TextEditingController();
-    final passphraseCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Decrypt Message',
-            style: TextStyle(color: AppColors.textMainDark)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: messageCtrl,
-                maxLines: 4,
-                style: const TextStyle(color: AppColors.textMainDark, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Paste encrypted PGP message',
-                  hintStyle: const TextStyle(color: AppColors.textSubDark),
-                  filled: true,
-                  fillColor: AppColors.backgroundDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passphraseCtrl,
-                obscureText: true,
-                style: const TextStyle(color: AppColors.textMainDark, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Passphrase',
-                  hintStyle: const TextStyle(color: AppColors.textSubDark),
-                  filled: true,
-                  fillColor: AppColors.backgroundDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSubDark)),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (messageCtrl.text.isEmpty || passphraseCtrl.text.isEmpty) return;
-              final messenger = ScaffoldMessenger.of(context);
-              try {
-                final decrypted = await PgpService().decrypt(messageCtrl.text, passphraseCtrl.text);
-                Navigator.pop(ctx);
-                Clipboard.setData(ClipboardData(text: decrypted));
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Decrypted text copied to clipboard')),
-                );
-              } catch (e) {
-                messenger.showSnackBar(
-                  SnackBar(content: Text('Decryption failed: $e')),
-                );
-              }
-            },
-            child: const Text('Decrypt', style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSignDialog(BuildContext context) {
-    final messageCtrl = TextEditingController();
-    final passphraseCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sign Message',
-            style: TextStyle(color: AppColors.textMainDark)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: messageCtrl,
-                maxLines: 3,
-                style: const TextStyle(color: AppColors.textMainDark, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Message to sign',
-                  hintStyle: const TextStyle(color: AppColors.textSubDark),
-                  filled: true,
-                  fillColor: AppColors.backgroundDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passphraseCtrl,
-                obscureText: true,
-                style: const TextStyle(color: AppColors.textMainDark, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Passphrase',
-                  hintStyle: const TextStyle(color: AppColors.textSubDark),
-                  filled: true,
-                  fillColor: AppColors.backgroundDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSubDark)),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (messageCtrl.text.isEmpty || passphraseCtrl.text.isEmpty) return;
-              final messenger = ScaffoldMessenger.of(context);
-              try {
-                final signed = await PgpService().sign(messageCtrl.text, passphraseCtrl.text);
-                Navigator.pop(ctx);
-                Clipboard.setData(ClipboardData(text: signed));
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Signed text copied to clipboard')),
-                );
-              } catch (e) {
-                messenger.showSnackBar(
-                  SnackBar(content: Text('Signing failed: $e')),
-                );
-              }
-            },
-            child: const Text('Sign', style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -417,7 +208,7 @@ class ManagePgpScreen extends StatelessWidget {
                   ),
 
                   // Manual Tools Section
-                  const _SectionTitle(title: 'Manual Tools'),
+                  const _SectionTitle(title: 'PGP Tools'),
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.surfaceCardDark,
@@ -433,8 +224,14 @@ class ManagePgpScreen extends StatelessWidget {
                           iconBgColor:
                               AppColors.emerald500.withValues(alpha: 0.1),
                           title: 'Encrypt Message',
-                          subtitle: 'Manually encrypt text for a contact',
-                          onTap: () => _showEncryptDialog(context),
+                          subtitle: 'Encrypt text with a public key',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const PgpEncryptScreen()),
+                            );
+                          },
                         ),
                         _divider(),
                         _SettingsItem(
@@ -443,8 +240,14 @@ class ManagePgpScreen extends StatelessWidget {
                           iconBgColor:
                               AppColors.amber500.withValues(alpha: 0.1),
                           title: 'Decrypt Message',
-                          subtitle: 'Decrypt raw PGP blocks',
-                          onTap: () => _showDecryptDialog(context),
+                          subtitle: 'Decrypt PGP encrypted text',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const PgpDecryptScreen()),
+                            );
+                          },
                         ),
                         _divider(),
                         _SettingsItem(
@@ -453,8 +256,30 @@ class ManagePgpScreen extends StatelessWidget {
                           iconBgColor:
                               AppColors.purple500.withValues(alpha: 0.1),
                           title: 'Sign Message',
-                          subtitle: 'Digitally sign cleartext messages',
-                          onTap: () => _showSignDialog(context),
+                          subtitle: 'Digitally sign a message',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const PgpSignScreen()),
+                            );
+                          },
+                        ),
+                        _divider(),
+                        _SettingsItem(
+                          icon: Icons.verified_user,
+                          iconColor: AppColors.primary,
+                          iconBgColor:
+                              AppColors.primary.withValues(alpha: 0.1),
+                          title: 'Verify Signature',
+                          subtitle: 'Check if a signed message is authentic',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const PgpVerifyScreen()),
+                            );
+                          },
                         ),
                       ],
                     ),

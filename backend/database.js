@@ -25,8 +25,6 @@ async function initializeDatabase() {
         user_id VARCHAR(36) NOT NULL,
         device_name VARCHAR(255) NOT NULL DEFAULT 'Unknown Device',
         device_type VARCHAR(50) DEFAULT 'unknown',
-        ip_address VARCHAR(45),
-        location VARCHAR(255),
         token_hash VARCHAR(255) NOT NULL,
         last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -73,17 +71,6 @@ async function initializeDatabase() {
         auto_delete_hours INT DEFAULT 24,
         contacts_enabled TINYINT(1) DEFAULT 0,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-
-    // IP access log (wiped every 60 min by cron)
-    await conn.execute(`
-      CREATE TABLE IF NOT EXISTS ip_logs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id VARCHAR(36),
-        ip_address VARCHAR(45),
-        action VARCHAR(100),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 

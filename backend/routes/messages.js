@@ -174,6 +174,41 @@ router.put('/:contactId/read', async (req, res) => {
   }
 });
 
+// POST /api/messages/screenshot-alert  — notify that a screenshot was attempted
+router.post('/screenshot-alert', async (req, res) => {
+  try {
+    const { recipientId } = req.body;
+    if (!recipientId) {
+      return res.status(400).json({ error: 'recipientId required' });
+    }
+
+    // Get sender username
+    const [users] = await pool.execute(
+      'SELECT username FROM users WHERE id = ?',
+      [req.userId]
+    );
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const alertText = `⚠️ ${users[0].username} tried to take a screenshot`;
+    const messageId = uuidv4();
+
+    await pool.execute(
+      'INSERT INTO messages (id, sender_id, recipient_id, encrypted_body, signature) VALUES (?, ?, ?, ?, ?)',
+      [messageId, req.userId, recipientId, alertText, '__SCREENSHOT_ALERT__']
+    );
+
+    res.status(201).json({
+      id: messageId,
+      alert: alertText,
+    });
+  } catch (err) {
+    console.error('[Messages] Screenshot alert error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // DELETE /api/messages/:contactId  — clear chat with a specific user
 router.delete('/:contactId', async (req, res) => {
   try {

@@ -206,6 +206,15 @@ class ApiService {
     } catch (_) {} // best-effort, don't block the UI
   }
 
+  /// Notify server that a screenshot attempt was detected
+  Future<void> sendScreenshotAlert(String recipientId) async {
+    try {
+      await post('/messages/screenshot-alert', body: {
+        'recipientId': recipientId,
+      });
+    } catch (_) {} // best-effort
+  }
+
   // ========== Uploads ==========
 
   Future<String> uploadImage(Uint8List bytes, String filename) async {

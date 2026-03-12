@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../services/pin_service.dart';
 import '../widgets/responsive_center.dart';
+import 'pin_setup_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,15 +14,33 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _api = ApiService();
+  final _pinService = PinService();
+  bool _pinEnabled = false;
 
   @override
   void initState() {
     super.initState();
+    _pinEnabled = _pinService.isEnabled;
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<void> _togglePin(bool enable) async {
+    if (enable) {
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+      );
+      if (result == true && mounted) {
+        setState(() => _pinEnabled = true);
+      }
+    } else {
+      await _pinService.removePin();
+      if (mounted) setState(() => _pinEnabled = false);
+    }
   }
 
   @override
@@ -37,6 +57,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // Security section
+          const Text(
+            'SECURITY',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSubDark,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceDark,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.borderDark),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_outline, size: 20, color: AppColors.primary),
+                        SizedBox(width: 12),
+                        Text(
+                          'PIN Lock',
+                          style: TextStyle(
+                            color: AppColors.textMainDark,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Switch(
+                      value: _pinEnabled,
+                      activeColor: AppColors.primary,
+                      onChanged: _togglePin,
+                    ),
+                  ],
+                ),
+                if (_pinEnabled) ...[
+                  const Divider(color: AppColors.borderDark, height: 24),
+                  GestureDetector(
+                    onTap: () async {
+                      final result = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+                      );
+                      if (result == true && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('PIN changed')),
+                        );
+                      }
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Change PIN',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: AppColors.slate400, size: 20),
+                      ],
+                    ),
+                  ),
+                ],
+                const Divider(color: AppColors.borderDark, height: 24),
+                const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warning),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '5 wrong attempts will wipe all data',
+                        style: TextStyle(
+                          color: AppColors.textSubDark,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           // About section
           const Text(
             'ABOUT',

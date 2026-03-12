@@ -6,6 +6,8 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
+import '../services/pin_service.dart';
+import 'pin_setup_screen.dart';
 import 'manage_pgp_screen.dart';
 import 'auto_delete_screen.dart';
 import 'device_management_screen.dart';
@@ -26,12 +28,14 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
   String _fingerprint = '';
   bool _hasKey = false;
   int _sessionCount = 0;
+  bool _pinEnabled = false;
 
   @override
   void initState() {
     super.initState();
     // Reload whenever the PGP key changes (generate / import / wipe)
     PgpService().addListener(_onKeyChanged);
+    _pinEnabled = PinService().isEnabled;
     _loadDynamicData();
   }
 
@@ -182,11 +186,10 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
               child: ListView(
                 padding: const EdgeInsets.all(12),
                 children: [
-                    // Manage PGP Keys (Active)
+                    // Manage PGP Keys
                     _DrawerMenuItem(
                       icon: Icons.vpn_key,
                       label: 'Manage PGP Keys',
-                      isActive: true,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -276,6 +279,31 @@ class _AppNavigationDrawerState extends State<AppNavigationDrawer> {
                             ),
                           ),
                         ),
+                      ),
+                    ),
+                    // PIN Lock
+                    _DrawerMenuItem(
+                      icon: Icons.lock_outline,
+                      label: 'PIN Lock',
+                      onTap: () {},
+                      trailing: Switch(
+                        value: _pinEnabled,
+                        activeColor: AppColors.primary,
+                        onChanged: (val) async {
+                          if (val) {
+                            Navigator.pop(context);
+                            final result = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+                            );
+                            if (result == true && mounted) {
+                              setState(() => _pinEnabled = true);
+                            }
+                          } else {
+                            await PinService().removePin();
+                            if (mounted) setState(() => _pinEnabled = false);
+                          }
+                        },
                       ),
                     ),
                     // Divider
