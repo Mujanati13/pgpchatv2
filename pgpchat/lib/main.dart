@@ -10,6 +10,7 @@ import 'screens/chat_list_screen.dart';
 import 'screens/pin_lock_screen.dart';
 import 'services/api_service.dart';
 import 'services/pin_service.dart';
+import 'services/push_notification_service.dart';
 
 /// Global navigator key — used to pop all routes on logout from anywhere.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -19,6 +20,7 @@ void main() async {
   // Always use the production server URL, overwriting any stale cached value
   await ApiService().setBaseUrl('http://93.127.129.90:3000/api');
   await PinService().init();
+  await PushNotificationService().init();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

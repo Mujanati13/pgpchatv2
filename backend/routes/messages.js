@@ -3,6 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { sendNewMessagePush } = require('../services/push');
 
 // All routes require authentication
 router.use(authenticate);
@@ -69,6 +70,19 @@ router.post('/', async (req, res) => {
       'INSERT INTO messages (id, sender_id, recipient_id, encrypted_body, signature) VALUES (?, ?, ?, ?, ?)',
       [messageId, req.userId, recipientId, encryptedBody, signature || null]
     );
+
+    const [senderRows] = await pool.execute(
+      'SELECT username FROM users WHERE id = ? LIMIT 1',
+      [req.userId]
+    );
+    const senderUsername = senderRows[0]?.username || 'New message';
+
+    // Best-effort push notification for recipient devices.
+    sendNewMessagePush({
+      recipientId,
+      senderId: req.userId,
+      senderUsername,
+    });
 
     // Auto-add to contacts if contacts are enabled for sender
     const [settings] = await pool.execute(

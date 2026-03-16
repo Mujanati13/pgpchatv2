@@ -147,6 +147,10 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> deleteAccount() async {
+    return delete('/auth/account');
+  }
+
   Future<Map<String, dynamic>> updatePublicKey(String publicKey) async {
     return put('/auth/public-key', body: {'publicKey': publicKey});
   }
@@ -297,6 +301,16 @@ class ApiService {
 
   Future<Map<String, dynamic>> terminateAllSessions() async {
     return delete('/sessions');
+  }
+
+  Future<Map<String, dynamic>> updatePushToken({
+    required String? token,
+    required String? platform,
+  }) async {
+    return put('/sessions/push-token', body: {
+      'token': token,
+      'platform': platform,
+    });
   }
 
   // ========== Settings ==========

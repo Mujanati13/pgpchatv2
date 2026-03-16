@@ -115,6 +115,24 @@ router.post('/logout', authenticate, async (req, res) => {
   }
 });
 
+// DELETE /api/auth/account  — permanently delete current account
+router.delete('/account', authenticate, async (req, res) => {
+  try {
+    const [result] = await pool.execute('DELETE FROM users WHERE id = ?', [
+      req.userId,
+    ]);
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ success: true, message: 'Account deleted' });
+  } catch (err) {
+    console.error('[Auth] Delete account error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // PUT /api/auth/public-key  — update user's public key
 router.put('/public-key', authenticate, async (req, res) => {
   try {

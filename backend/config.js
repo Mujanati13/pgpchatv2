@@ -27,4 +27,10 @@ module.exports = {
   backup: {
     syncIntervalSeconds: 60,
   },
+  firebase: {
+    // Either paste the raw service-account JSON in FIREBASE_SERVICE_ACCOUNT_JSON
+    // or provide a file path via FIREBASE_SERVICE_ACCOUNT_PATH.
+    serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '',
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',
+  },
 };

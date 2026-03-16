@@ -103,6 +103,24 @@ async function initializeDatabase() {
     } catch (e) {
       if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     }
+
+    try {
+      await conn.execute(
+        `ALTER TABLE sessions ADD COLUMN push_token VARCHAR(512) NULL DEFAULT NULL`
+      );
+      console.log('[DB] Migration: added push_token to sessions');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
+
+    try {
+      await conn.execute(
+        `ALTER TABLE sessions ADD COLUMN push_platform VARCHAR(32) NULL DEFAULT NULL`
+      );
+      console.log('[DB] Migration: added push_platform to sessions');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
   } finally {
     conn.release();
   }

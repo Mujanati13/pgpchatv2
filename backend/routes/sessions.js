@@ -5,6 +5,23 @@ const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 
+// PUT /api/sessions/push-token  — register/unregister push token for current session
+router.put('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+
+    await pool.execute(
+      'UPDATE sessions SET push_token = ?, push_platform = ? WHERE id = ? AND user_id = ?',
+      [token || null, platform || null, req.sessionId, req.userId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Sessions] Push token update error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/sessions  — list all sessions for current user
 router.get('/', async (req, res) => {
   try {

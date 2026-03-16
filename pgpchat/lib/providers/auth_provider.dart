@@ -5,10 +5,12 @@ import '../main.dart' show navigatorKey;
 import '../screens/login_screen.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
+import '../services/push_notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService _api = ApiService();
   final PgpService _pgp = PgpService();
+  final PushNotificationService _push = PushNotificationService();
 
   bool _isAuthenticated = false;
   bool _isLoading = false;
@@ -51,6 +53,9 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _username = prefs.getString('username');
       _userId = prefs.getString('user_id');
+      try {
+        await _push.syncTokenWithServer();
+      } catch (_) {}
     }
     notifyListeners();
   }
@@ -68,6 +73,9 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('username', username);
       if (_userId != null) await prefs.setString('user_id', _userId!);
+      try {
+        await _push.syncTokenWithServer();
+      } catch (_) {}
       _isLoading = false;
       notifyListeners();
       return true;
@@ -97,6 +105,9 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('username', username);
       if (_userId != null) await prefs.setString('user_id', _userId!);
+      try {
+        await _push.syncTokenWithServer();
+      } catch (_) {}
       _isLoading = false;
       notifyListeners();
       return true;
@@ -114,6 +125,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    try {
+      await _push.unregisterTokenFromServer();
+    } catch (_) {}
     try {
       await _api.logout();
     } catch (_) {}
