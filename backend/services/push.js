@@ -111,6 +111,8 @@ async function sendNewMessagePush({ recipientId, senderId, senderUsername }) {
       result.responses.forEach((resp, idx) => {
         if (!resp.success) {
           const code = resp.error?.code || '';
+          const msg = resp.error?.message || '';
+          console.error(`[Push] Token #${idx} failed: code=${code} msg=${msg}`);
           if (
             code === 'messaging/registration-token-not-registered' ||
             code === 'messaging/invalid-registration-token'
