@@ -44,5 +44,22 @@ After signup you'll be guided to key generation:
 - 🗑️ Auto-delete is ON by default (24h) — messages delete themselves
 - 📵 If you reset your PGP key, **all chat history is wiped**
 
+## 8. Firebase Push Notifications Setup
+
+To enable message push notifications, complete these one-time steps:
+
+1. Create a Firebase project and add Android + iOS apps.
+2. Place Android config file at:
+	- `pgpchat/android/app/google-services.json`
+3. Place iOS config file at:
+	- `pgpchat/ios/Runner/GoogleService-Info.plist`
+4. In Firebase Console, enable Cloud Messaging for the project.
+5. For backend server credentials, create a service account JSON in Firebase.
+6. Configure backend env with one of these options:
+	- `FIREBASE_SERVICE_ACCOUNT_JSON={...full json...}`
+	- `FIREBASE_SERVICE_ACCOUNT_PATH=/absolute/path/to/service-account.json`
+7. Restart backend so Firebase Admin initializes.
+8. Run app, login, and send a message from another account/device to test delivery.
+
 ---
 *PGP Chat — your messages are private by design.*

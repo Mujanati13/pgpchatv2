@@ -67,6 +67,24 @@ async function sendNewMessagePush({ recipientId, senderId, senderUsername }) {
       data: {
         type: 'new_message',
         senderId: String(senderId),
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'messages',
+        },
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10',
+          'apns-push-type': 'alert',
+        },
+        payload: {
+          aps: {
+            sound: 'default',
+          },
+        },
       },
       tokens,
     };

@@ -76,16 +76,21 @@ class ApiService {
     );
   }
 
-  Future<Map<String, dynamic>> get(String path,
-      {Map<String, String>? queryParams}) async {
-    final url = Uri.parse('${await baseUrl}$path')
-        .replace(queryParameters: queryParams);
+  Future<Map<String, dynamic>> get(
+    String path, {
+    Map<String, String>? queryParams,
+  }) async {
+    final url = Uri.parse(
+      '${await baseUrl}$path',
+    ).replace(queryParameters: queryParams);
     final response = await http.get(url, headers: await _headers());
     return _handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> post(String path,
-      {Map<String, dynamic>? body}) async {
+  Future<Map<String, dynamic>> post(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final url = Uri.parse('${await baseUrl}$path');
     final response = await http.post(
       url,
@@ -95,8 +100,10 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> put(String path,
-      {Map<String, dynamic>? body}) async {
+  Future<Map<String, dynamic>> put(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final url = Uri.parse('${await baseUrl}$path');
     final response = await http.put(
       url,
@@ -121,20 +128,22 @@ class ApiService {
   // ========== Auth ==========
 
   Future<Map<String, dynamic>> register(
-      String username, String password) async {
-    final result = await post('/auth/register', body: {
-      'username': username,
-      'password': password,
-    });
+    String username,
+    String password,
+  ) async {
+    final result = await post(
+      '/auth/register',
+      body: {'username': username, 'password': password},
+    );
     await setToken(result['token'] as String);
     return result;
   }
 
   Future<Map<String, dynamic>> login(String username, String password) async {
-    final result = await post('/auth/login', body: {
-      'username': username,
-      'password': password,
-    });
+    final result = await post(
+      '/auth/login',
+      body: {'username': username, 'password': password},
+    );
     await setToken(result['token'] as String);
     return result;
   }
@@ -164,18 +173,27 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> confirmRecovery(
-      String username, String challenge, String newPassword) async {
-    return post('/auth/recover-confirm', body: {
-      'username': username,
-      'challenge': challenge,
-      'newPassword': newPassword,
-    });
+    String username,
+    String challenge,
+    String newPassword,
+  ) async {
+    return post(
+      '/auth/recover-confirm',
+      body: {
+        'username': username,
+        'challenge': challenge,
+        'newPassword': newPassword,
+      },
+    );
   }
 
   // ========== Messages ==========
 
-  Future<Map<String, dynamic>> getMessages(String otherUserId,
-      {int? before, int limit = 50}) async {
+  Future<Map<String, dynamic>> getMessages(
+    String otherUserId, {
+    int? before,
+    int limit = 50,
+  }) async {
     final params = <String, String>{
       'contactId': otherUserId,
       'limit': limit.toString(),
@@ -189,11 +207,14 @@ class ApiService {
     required String encryptedBody,
     String? signature,
   }) async {
-    return post('/messages', body: {
-      'recipientId': recipientId,
-      'encryptedBody': encryptedBody,
-      if (signature != null) 'signature': signature,
-    });
+    return post(
+      '/messages',
+      body: {
+        'recipientId': recipientId,
+        'encryptedBody': encryptedBody,
+        if (signature != null) 'signature': signature,
+      },
+    );
   }
 
   Future<Map<String, dynamic>> getConversations() async {
@@ -213,9 +234,10 @@ class ApiService {
   /// Notify server that a screenshot attempt was detected
   Future<void> sendScreenshotAlert(String recipientId) async {
     try {
-      await post('/messages/screenshot-alert', body: {
-        'recipientId': recipientId,
-      });
+      await post(
+        '/messages/screenshot-alert',
+        body: {'recipientId': recipientId},
+      );
     } catch (_) {} // best-effort
   }
 
@@ -228,15 +250,23 @@ class ApiService {
     if (t != null) request.headers['Authorization'] = 'Bearer $t';
     // Derive MIME type from filename extension so multer accepts it
     final ext = filename.split('.').last.toLowerCase();
-    final mime = <String, String>{
-      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-      'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
-    }[ext] ?? 'image/jpeg';
-    request.files.add(http.MultipartFile.fromBytes(
-      'image', bytes,
-      filename: filename,
-      contentType: MediaType.parse(mime),
-    ));
+    final mime =
+        <String, String>{
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        }[ext] ??
+        'image/jpeg';
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image',
+        bytes,
+        filename: filename,
+        contentType: MediaType.parse(mime),
+      ),
+    );
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 401) {
@@ -279,14 +309,17 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> toggleBlock(
-      String contactId, bool blocked) async {
+    String contactId,
+    bool blocked,
+  ) async {
     return put('/contacts/$contactId/block', body: {'blocked': blocked});
   }
 
   Future<Map<String, dynamic>> blockByKey(String pgpKeyFragment) async {
-    return post('/contacts/block-key', body: {
-      'pgpKeyFragment': pgpKeyFragment,
-    });
+    return post(
+      '/contacts/block-key',
+      body: {'pgpKeyFragment': pgpKeyFragment},
+    );
   }
 
   // ========== Sessions ==========
@@ -307,10 +340,10 @@ class ApiService {
     required String? token,
     required String? platform,
   }) async {
-    return put('/sessions/push-token', body: {
-      'token': token,
-      'platform': platform,
-    });
+    return put(
+      '/sessions/push-token',
+      body: {'token': token, 'platform': platform},
+    );
   }
 
   // ========== Settings ==========
@@ -320,13 +353,16 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateSettings(
-      Map<String, dynamic> settings) async {
+    Map<String, dynamic> settings,
+  ) async {
     return put('/settings', body: settings);
   }
 
   Future<Map<String, dynamic>> autoDeleteNow({int? hours}) async {
-    return post('/settings/auto-delete-now',
-        body: hours != null ? {'hours': hours} : null);
+    return post(
+      '/settings/auto-delete-now',
+      body: hours != null ? {'hours': hours} : null,
+    );
   }
 }
 

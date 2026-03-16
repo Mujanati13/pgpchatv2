@@ -1,7 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api_service.dart';
+
+const AndroidNotificationChannel _messagesChannel = AndroidNotificationChannel(
+  'messages',
+  'Messages',
+  description: 'Notifications for incoming chat messages',
+  importance: Importance.high,
+);
 
 class PushNotificationService {
   static final PushNotificationService _instance =
@@ -10,6 +18,8 @@ class PushNotificationService {
   PushNotificationService._internal();
 
   final ApiService _api = ApiService();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   Future<void> init() async {
@@ -24,6 +34,8 @@ class PushNotificationService {
 
     final messaging = FirebaseMessaging.instance;
 
+    await _initLocalNotifications();
+
     await messaging.requestPermission(
       alert: true,
       badge: true,
@@ -31,10 +43,17 @@ class PushNotificationService {
       provisional: false,
     );
 
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     await messaging.setAutoInitEnabled(true);
 
-    FirebaseMessaging.onMessage.listen((message) {
+    FirebaseMessaging.onMessage.listen((message) async {
       debugPrint('[Push] Foreground message: ${message.messageId}');
+      await _showForegroundNotification(message);
     });
 
     messaging.onTokenRefresh.listen((token) async {
@@ -46,6 +65,46 @@ class PushNotificationService {
     });
 
     _initialized = true;
+  }
+
+  Future<void> _initLocalNotifications() async {
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: iosInit,
+    );
+
+    await _localNotifications.initialize(initSettings);
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_messagesChannel);
+  }
+
+  Future<void> _showForegroundNotification(RemoteMessage message) async {
+    final n = message.notification;
+    if (n == null) return;
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'messages',
+        'Messages',
+        channelDescription: 'Notifications for incoming chat messages',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+
+    await _localNotifications.show(
+      message.hashCode,
+      n.title ?? 'New message',
+      n.body ?? 'You received a new message',
+      details,
+    );
   }
 
   Future<void> syncTokenWithServer() async {
