@@ -15,6 +15,14 @@ router.put('/push-token', async (req, res) => {
       [token || null, platform || null, req.sessionId, req.userId]
     );
 
+    console.log(
+      '[Sessions] Push token updated:',
+      `user=${req.userId}`,
+      `session=${req.sessionId}`,
+      `platform=${platform || 'none'}`,
+      `token=${token ? `${String(token).slice(0, 12)}...` : 'null'}`
+    );
+
     res.json({ success: true });
   } catch (err) {
     console.error('[Sessions] Push token update error:', err.message);

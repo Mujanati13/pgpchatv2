@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const admin = require('firebase-admin');
 const config = require('../config');
 const { pool } = require('../database');
@@ -8,6 +9,7 @@ let disabled = false;
 
 function _readServiceAccount() {
   const { serviceAccountJson, serviceAccountPath } = config.firebase;
+  const defaultPath = path.join(__dirname, '..', 'firebase-service-account.json');
 
   if (serviceAccountJson) {
     return JSON.parse(serviceAccountJson);
@@ -15,6 +17,11 @@ function _readServiceAccount() {
 
   if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
     const raw = fs.readFileSync(serviceAccountPath, 'utf8');
+    return JSON.parse(raw);
+  }
+
+  if (fs.existsSync(defaultPath)) {
+    const raw = fs.readFileSync(defaultPath, 'utf8');
     return JSON.parse(raw);
   }
 
@@ -57,7 +64,10 @@ async function sendNewMessagePush({ recipientId, senderId, senderUsername }) {
     );
 
     const tokens = rows.map((r) => r.push_token).filter(Boolean);
-    if (!tokens.length) return;
+    if (!tokens.length) {
+      console.log('[Push] No registered tokens for recipient:', recipientId);
+      return;
+    }
 
     const payload = {
       notification: {
@@ -90,6 +100,11 @@ async function sendNewMessagePush({ recipientId, senderId, senderUsername }) {
     };
 
     const result = await admin.messaging().sendEachForMulticast(payload);
+    console.log(
+      '[Push] Multicast result:',
+      `success=${result.successCount}`,
+      `failure=${result.failureCount}`
+    );
 
     if (result.failureCount > 0) {
       const invalidTokens = [];

@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 import 'api_service.dart';
 
 const AndroidNotificationChannel _messagesChannel = AndroidNotificationChannel(
@@ -21,6 +22,7 @@ class PushNotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _localNotificationsReady = false;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -75,16 +77,31 @@ class PushNotificationService {
       iOS: iosInit,
     );
 
-    await _localNotifications.initialize(initSettings);
+    try {
+      await _localNotifications.initialize(initSettings);
 
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_messagesChannel);
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(_messagesChannel);
+
+      _localNotificationsReady = true;
+    } on MissingPluginException {
+      // Happens after hot-restart before native plugin registration catches up.
+      _localNotificationsReady = false;
+      debugPrint(
+        '[Push] Local notifications plugin not registered yet; foreground banners disabled for this run.',
+      );
+    } catch (e) {
+      _localNotificationsReady = false;
+      debugPrint('[Push] Local notifications init failed: $e');
+    }
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
+    if (!_localNotificationsReady) return;
+
     final n = message.notification;
     if (n == null) return;
 
