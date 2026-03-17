@@ -21,10 +21,14 @@ function _readServiceAccount() {
   }
 
   if (fs.existsSync(defaultPath)) {
+    console.log('[Push] Loading service account from:', defaultPath);
     const raw = fs.readFileSync(defaultPath, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    console.log('[Push] Service account key_id:', parsed.private_key_id, 'project:', parsed.project_id);
+    return parsed;
   }
 
+  console.warn('[Push] No service account file found at:', defaultPath);
   return null;
 }
 
