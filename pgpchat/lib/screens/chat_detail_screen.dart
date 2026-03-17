@@ -37,18 +37,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _pgp = PgpService();
+  final _api = ApiService();
   final _screenshotService = ScreenshotService();
   String? _passphrase;
   String _fingerprint = '';
+  String? _otherPublicKey;
   Timer? _countdownTimer;
   Duration _remaining = Duration.zero;
 
   @override
   void initState() {
     super.initState();
+    _otherPublicKey = _otherPublicKey;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ChatProvider>().startMessagePolling(widget.otherUserId);
       context.read<ChatProvider>().markRead(widget.otherUserId);
+      await _fetchLatestPublicKey();
       _loadFingerprint();
       _startCountdown();
     });
@@ -56,9 +60,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _screenshotService.startListening(onDetected: _onScreenshotDetected);
   }
 
+  Future<void> _fetchLatestPublicKey() async {
+    try {
+      final key = await _api.getUserPublicKey(widget.otherUserId);
+      if (mounted && key != null && key.isNotEmpty) {
+        setState(() => _otherPublicKey = key);
+      }
+    } catch (_) {
+      // fall back to the key passed from the conversation list
+    }
+  }
+
   Future<void> _loadFingerprint() async {
-    if (widget.otherPublicKey != null && widget.otherPublicKey!.isNotEmpty) {
-      final fp = _pgp.getFingerprint(widget.otherPublicKey!);
+    if (_otherPublicKey != null && _otherPublicKey!.isNotEmpty) {
+      final fp = _pgp.getFingerprint(_otherPublicKey!);
       if (mounted) setState(() => _fingerprint = fp);
     }
   }
@@ -125,7 +140,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (text.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
 
-    if (widget.otherPublicKey == null) {
+    if (_otherPublicKey == null) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Recipient has no public key')),
       );
@@ -133,7 +148,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
 
     try {
-      final encrypted = await _pgp.encrypt(text, widget.otherPublicKey!);
+      final encrypted = await _pgp.encrypt(text, _otherPublicKey!);
       String? signature;
       if (_passphrase != null) {
         signature = await _pgp.sign(text, _passphrase!);
@@ -169,7 +184,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // Capture messenger before any async gap to avoid deactivated-widget error
     final messenger = ScaffoldMessenger.of(context);
 
-    if (widget.otherPublicKey == null) {
+    if (_otherPublicKey == null) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Recipient has no public key')),
       );
@@ -214,7 +229,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
       // 2. Encrypt only the small reference string
       final payload = '[IMAGE:$serverFilename]';
-      final encrypted = await _pgp.encrypt(payload, widget.otherPublicKey!);
+      final encrypted = await _pgp.encrypt(payload, _otherPublicKey!);
       if (!mounted) return;
 
       // 3. Send encrypted reference as message
@@ -239,7 +254,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
-  // Returns null on cancel, '\x00FAIL' on wrong passphrase, decrypted text on success.
+  // Returns null on cancel, '\x00FAIL:reason' on error, decrypted text on success.
   Future<String?> _decryptMessage(String encryptedBody) async {
     if (_passphrase == null) {
       _passphrase = await _showPassphraseDialog();
@@ -249,9 +264,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final result = await _pgp.decrypt(encryptedBody.trim(), _passphrase!);
       return result.trim();
     } catch (e) {
+      final err = e.toString().toLowerCase();
       debugPrint('[Decrypt] Error: $e');
-      _passphrase = null; // clear so next tap re-prompts
-      return '\x00FAIL';
+      if (err.contains('passphrase') ||
+          err.contains('password') ||
+          err.contains('checksum') ||
+          err.contains('s2k')) {
+        _passphrase = null;
+        return '\x00FAIL';
+      }
+      if (err.contains('incorrect key') || err.contains('no valid openpgp')) {
+        return '\x00FAIL:Encrypted with a different key';
+      }
+      return '\x00FAIL:${e.toString()}';
     }
   }
 
@@ -930,11 +955,13 @@ class _MessageBubbleState extends State<_MessageBubble> {
   String? _decryptedText;
   bool _isDecrypting = false;
   bool _decryptFailed = false;
+  String _failReason = '';
 
   Future<void> _decrypt() async {
     setState(() {
       _isDecrypting = true;
       _decryptFailed = false;
+      _failReason = '';
     });
     final text = await widget.onDecrypt(widget.encryptedBody);
     if (!mounted) return;
@@ -946,6 +973,14 @@ class _MessageBubbleState extends State<_MessageBubble> {
       setState(() {
         _isDecrypting = false;
         _decryptFailed = true;
+        _failReason = 'Wrong passphrase';
+      });
+    } else if (text.startsWith('\x00FAIL:')) {
+      // decryption error (not passphrase related)
+      setState(() {
+        _isDecrypting = false;
+        _decryptFailed = true;
+        _failReason = text.substring(6); // strip '\x00FAIL:' prefix
       });
     } else {
       setState(() {
@@ -1214,22 +1249,30 @@ class _MessageBubbleState extends State<_MessageBubble> {
         ],
       );
     }
-    // Wrong passphrase — show retry prompt
+    // Decryption failed — show error and retry prompt
     if (_decryptFailed) {
       return GestureDetector(
         onTap: _decrypt,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_reset, size: 14, color: Color(0xFFEF4444)),
-            const SizedBox(width: 6),
-            Text(
-              'Wrong passphrase — tap to retry',
-              style: TextStyle(
-                color: Color(0xFFEF4444),
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_reset, size: 14, color: Color(0xFFEF4444)),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${_failReason.isNotEmpty ? _failReason : 'Decryption failed'} \u2014 tap to retry',
+                    style: TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

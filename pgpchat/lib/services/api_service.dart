@@ -125,6 +125,11 @@ class ApiService {
     return get('/users/search', queryParams: {'q': query});
   }
 
+  Future<String?> getUserPublicKey(String userId) async {
+    final result = await get('/users/$userId/public-key');
+    return result['publicKey'] as String?;
+  }
+
   // ========== Auth ==========
 
   Future<Map<String, dynamic>> register(
