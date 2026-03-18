@@ -1,0 +1,15 @@
+
+            <html xmlns:o="urn:schemas-microsoft-com:office:office"
+                  xmlns:x="urn:schemas-microsoft-com:office:excel"
+                  xmlns="http://www.w3.org/TR/REC-html40">
+              <head>
+                <meta charset="UTF-8">
+              </head>
+              <body>
+                <table border="1">
+                  <thead><tr><th>Belegdatum</th><th>Belegnummernkreis</th><th>Belegnummer</th><th>Buchungstext</th><th>Betrag</th><th>Sollkonto</th><th>Habenkonto</th><th>Steuerschlüssel</th><th>Kostenstelle</th><th>Kostenträger</th><th>Erfasst am</th></tr></thead>
+                  <tbody><tr><td>15.11.2025</td><td>ERM</td><td>123</td><td>20</td><td>200,00</td><td>4000</td><td>200</td><td>9</td><td></td><td></td><td>18.3.2026, 13:04:53</td></tr></tbody>
+                </table>
+              </body>
+            </html>
+          

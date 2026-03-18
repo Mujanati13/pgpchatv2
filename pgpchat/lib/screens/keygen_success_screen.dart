@@ -3,12 +3,18 @@ import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_center.dart';
 import '../services/pgp_service.dart';
+import '../services/api_service.dart';
 import 'chat_list_screen.dart';
 
 class KeygenSuccessScreen extends StatelessWidget {
   final String? fingerprint;
+  final bool publicKeySynced;
 
-  const KeygenSuccessScreen({super.key, this.fingerprint});
+  const KeygenSuccessScreen({
+    super.key,
+    this.fingerprint,
+    this.publicKeySynced = true,
+  });
 
   static const Color _successGreen = AppColors.successPrimary;
   static const Color _successBgDark = AppColors.successBackgroundDark;
@@ -166,6 +172,73 @@ class KeygenSuccessScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
+                    // Warning: public key not synced
+                    if (!publicKeySynced)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Public key not uploaded',
+                                  style: TextStyle(
+                                    color: Color(0xFFF59E0B),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Your session expired during key generation. Your key was saved locally, but others cannot send you encrypted messages until you sync.',
+                              style: TextStyle(color: AppColors.slate400, fontSize: 13, height: 1.4),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton(
+                                onPressed: () async {
+                                  try {
+                                    final pubKey = await PgpService().publicKey;
+                                    if (pubKey != null) {
+                                      await ApiService().updatePublicKey(pubKey);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Public key synced to server')),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Sync failed — try again from Manage PGP: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                                style: TextButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                                  foregroundColor: const Color(0xFFF59E0B),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Sync now', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     // Action Buttons
                     _ActionButton(
                       icon: Icons.vpn_key,

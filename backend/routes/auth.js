@@ -8,6 +8,17 @@ const config = require('../config');
 const { pool } = require('../database');
 const { authenticate } = require('../middleware/auth');
 
+// Reserved usernames — cannot be registered by anyone
+const RESERVED_USERNAMES = new Set([
+  'support',
+  'admin',
+  'system',
+  'bot',
+  'help',
+  'info',
+  'noreply',
+]);
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
@@ -17,6 +28,11 @@ router.post('/register', async (req, res) => {
     }
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    // Check if username is reserved
+    if (RESERVED_USERNAMES.has(username.toLowerCase())) {
+      return res.status(400).json({ error: 'This username is reserved and cannot be used' });
     }
 
     const userId = uuidv4();

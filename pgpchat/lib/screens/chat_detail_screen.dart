@@ -42,13 +42,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _passphrase;
   String _fingerprint = '';
   String? _otherPublicKey;
+  bool _isCheckingKey = true; // true until _fetchLatestPublicKey completes
   Timer? _countdownTimer;
   Duration _remaining = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _otherPublicKey = _otherPublicKey;
+    _otherPublicKey = widget.otherPublicKey; // fix: use widget value
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ChatProvider>().startMessagePolling(widget.otherUserId);
       context.read<ChatProvider>().markRead(widget.otherUserId);
@@ -63,11 +64,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Future<void> _fetchLatestPublicKey() async {
     try {
       final key = await _api.getUserPublicKey(widget.otherUserId);
-      if (mounted && key != null && key.isNotEmpty) {
-        setState(() => _otherPublicKey = key);
+      if (mounted) {
+        setState(() {
+          if (key != null && key.isNotEmpty) _otherPublicKey = key;
+          _isCheckingKey = false;
+        });
       }
     } catch (_) {
       // fall back to the key passed from the conversation list
+      if (mounted) setState(() => _isCheckingKey = false);
     }
   }
 
@@ -139,6 +144,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
+
+    if (_isCheckingKey) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Checking recipient PGP key...')),
+      );
+      return;
+    }
 
     if (_otherPublicKey == null) {
       messenger.showSnackBar(
@@ -729,6 +741,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.slate500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // ─── No PGP key warning ───
+            if (!_isCheckingKey && (_otherPublicKey == null || _otherPublicKey!.isEmpty))
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        color: Color(0xFFF59E0B), size: 16),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'This user has no PGP key — messages cannot be sent until they set one up.',
+                        style: TextStyle(
+                          color: Color(0xFFF59E0B),
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],

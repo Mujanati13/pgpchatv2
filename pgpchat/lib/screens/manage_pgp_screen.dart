@@ -31,11 +31,37 @@ class ManagePgpScreen extends StatelessWidget {
     final pgp = PgpService();
 
     if (content.contains('BEGIN PGP PRIVATE KEY')) {
-      // Ask for the public key too, or extract from the private
-      await pgp.importKeys(publicKey: '', privateKey: content);
+      // Also require the public key so we can upload it to the server
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Private key imported')),
+          const SnackBar(
+            content: Text('Private key selected. Now pick your PUBLIC key file.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      final pubResult = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+      String publicKey = '';
+      if (pubResult != null && pubResult.files.single.path != null) {
+        final pubContent = await File(pubResult.files.single.path!).readAsString();
+        if (pubContent.contains('BEGIN PGP PUBLIC KEY')) {
+          publicKey = pubContent;
+        }
+      }
+      await pgp.importKeys(publicKey: publicKey, privateKey: content);
+      if (publicKey.isNotEmpty) {
+        await ApiService().updatePublicKey(publicKey);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(publicKey.isNotEmpty
+                ? 'Key pair imported and synced to server'
+                : 'Private key imported (public key not provided — tap "Sync public key to server" to fix)'),
+          ),
         );
       }
     } else if (content.contains('BEGIN PGP PUBLIC KEY')) {
@@ -51,6 +77,33 @@ class ManagePgpScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invalid PGP key file')),
+        );
+      }
+    }
+  }
+
+  Future<void> _syncPublicKeyToServer(BuildContext context) async {
+    final pgp = PgpService();
+    final pubKey = await pgp.publicKey;
+    if (pubKey == null || pubKey.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No public key found on this device')),
+        );
+      }
+      return;
+    }
+    try {
+      await ApiService().updatePublicKey(pubKey);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Public key synced to server successfully')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e')),
         );
       }
     }
@@ -178,6 +231,15 @@ class ManagePgpScreen extends StatelessWidget {
                           title: 'Import PGP Key',
                           subtitle: 'Import existing private or public keys',
                           onTap: () => _importKey(context),
+                        ),
+                        _divider(),
+                        _SettingsItem(
+                          icon: Icons.cloud_upload,
+                          iconColor: AppColors.primary,
+                          iconBgColor: AppColors.primary.withValues(alpha: 0.1),
+                          title: 'Sync public key to server',
+                          subtitle: 'Re-upload your public key — fixes "incorrect key" decryption errors',
+                          onTap: () => _syncPublicKeyToServer(context),
                         ),
                         _divider(),
                         _SettingsItem(

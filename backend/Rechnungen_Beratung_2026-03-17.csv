@@ -1,0 +1,3 @@
+Belegdatum,Belegnummernkreis,Belegnummer,Buchungstext,Betrag,Sollkonto,Habenkonto,Steuerschlüssel,Kostenstelle,Kostenträger,Erfasst am
+"November 15, 2025",ERM,120,120r,400.00,4000,200,9,,,"17.3.2026, 15:16:04"
+"November 15, 2025",ERM,test,invoice test,1000.00,4000,200,9,,,"March 16, 2026, 9:00:59 PM"

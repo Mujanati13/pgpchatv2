@@ -56,8 +56,14 @@ class _KeygenStep3ScreenState extends State<KeygenStep3Screen>
         keyLength: widget.keyLength,
       );
 
-      // Upload public key to server
-      await ApiService().updatePublicKey(keyPair.publicKey);
+      // Upload public key to server (best-effort — keys are already saved locally)
+      bool synced = false;
+      try {
+        await ApiService().updatePublicKey(keyPair.publicKey);
+        synced = true;
+      } catch (_) {
+        // Upload failed — user can sync later from Manage PGP
+      }
 
       if (!mounted) return;
       setState(() => _progress = 1.0);
@@ -68,7 +74,10 @@ class _KeygenStep3ScreenState extends State<KeygenStep3Screen>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-            builder: (_) => KeygenSuccessScreen(fingerprint: fingerprint)),
+            builder: (_) => KeygenSuccessScreen(
+                  fingerprint: fingerprint,
+                  publicKeySynced: synced,
+                )),
       );
     } catch (e) {
       if (!mounted) return;
