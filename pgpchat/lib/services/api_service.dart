@@ -320,6 +320,13 @@ class ApiService {
     return put('/contacts/$contactId/block', body: {'blocked': blocked});
   }
 
+  Future<Map<String, dynamic>> toggleBlockByUser(
+    String userId,
+    bool blocked,
+  ) async {
+    return put('/contacts/user/$userId/block', body: {'blocked': blocked});
+  }
+
   Future<Map<String, dynamic>> blockByKey(String pgpKeyFragment) async {
     return post(
       '/contacts/block-key',

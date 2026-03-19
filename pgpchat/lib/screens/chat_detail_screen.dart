@@ -34,6 +34,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _disposed = false;
   bool _isUploadingImage = false;
   bool _isClearingChat = false;
+  bool _isBlocked = false;
+  bool _isTogglingBlock = false;
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _pgp = PgpService();
@@ -53,6 +55,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ChatProvider>().startMessagePolling(widget.otherUserId);
       context.read<ChatProvider>().markRead(widget.otherUserId);
+      await _loadBlockStatus();
       await _fetchLatestPublicKey();
       _loadFingerprint();
       _startCountdown();
@@ -80,6 +83,94 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (_otherPublicKey != null && _otherPublicKey!.isNotEmpty) {
       final fp = _pgp.getFingerprint(_otherPublicKey!);
       if (mounted) setState(() => _fingerprint = fp);
+    }
+  }
+
+  Future<void> _loadBlockStatus() async {
+    try {
+      final result = await _api.getContacts();
+      final contacts = List<Map<String, dynamic>>.from(
+        result['contacts'] as List? ?? [],
+      );
+      final matched = contacts.where((c) {
+        return c['contact_user_id']?.toString() == widget.otherUserId;
+      }).toList();
+      if (!mounted) return;
+      if (matched.isEmpty) {
+        setState(() => _isBlocked = false);
+        return;
+      }
+      final raw = matched.first['is_blocked'];
+      setState(() => _isBlocked = raw == 1 || raw == true);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleBlockUser() async {
+    final willBlock = !_isBlocked;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          willBlock ? 'Block user?' : 'Unblock user?',
+          style: const TextStyle(color: AppColors.textMainDark),
+        ),
+        content: Text(
+          willBlock
+              ? 'You will stop receiving messages from ${widget.otherUsername} and you will not be able to send messages until unblocked.'
+              : 'You can send and receive messages with ${widget.otherUsername} again.',
+          style: const TextStyle(color: AppColors.textSubDark),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSubDark),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              willBlock ? 'Block' : 'Unblock',
+              style: TextStyle(
+                color: willBlock ? AppColors.error : AppColors.success,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isTogglingBlock = true);
+    try {
+      await _api.toggleBlockByUser(widget.otherUserId, willBlock);
+      if (!mounted) return;
+      setState(() => _isBlocked = willBlock);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            willBlock
+                ? '${widget.otherUsername} blocked'
+                : '${widget.otherUsername} unblocked',
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update block status')),
+      );
+    } finally {
+      if (mounted) setState(() => _isTogglingBlock = false);
     }
   }
 
@@ -168,10 +259,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
       if (!mounted) return;
       final success = await context.read<ChatProvider>().sendMessage(
-            recipientId: widget.otherUserId,
-            encryptedBody: encrypted,
-            signature: signature,
-          );
+        recipientId: widget.otherUserId,
+        encryptedBody: encrypted,
+        signature: signature,
+      );
 
       if (success) {
         _messageController.clear();
@@ -179,16 +270,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           await context.read<ChatProvider>().loadMessages(widget.otherUserId);
           // Scroll to bottom (index 0 = newest with reverse:true)
           if (_scrollController.hasClients) {
-            _scrollController.animateTo(0,
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut);
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
           }
         }
       }
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Encryption failed: $e')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Encryption failed: $e')));
     }
   }
 
@@ -206,7 +297,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       withData: true,
-      allowCompression: false, // avoid temp-file write that causes Permission denied
+      allowCompression:
+          false, // avoid temp-file write that causes Permission denied
     );
     if (result == null || result.files.isEmpty) return;
 
@@ -229,9 +321,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // Scroll to bottom so the skeleton is visible
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(0,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut);
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
       }
     });
 
@@ -246,15 +340,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
       // 3. Send encrypted reference as message
       final success = await context.read<ChatProvider>().sendMessage(
-            recipientId: widget.otherUserId,
-            encryptedBody: encrypted,
-          );
+        recipientId: widget.otherUserId,
+        encryptedBody: encrypted,
+      );
       if (success && mounted) {
         await context.read<ChatProvider>().loadMessages(widget.otherUserId);
         if (_scrollController.hasClients) {
-          _scrollController.animateTo(0,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOut);
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
         }
       }
     } catch (e) {
@@ -300,8 +396,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Enter Passphrase',
-            style: TextStyle(color: AppColors.textMainDark)),
+        title: const Text(
+          'Enter Passphrase',
+          style: TextStyle(color: AppColors.textMainDark),
+        ),
         content: TextField(
           controller: controller,
           obscureText: true,
@@ -320,13 +418,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSubDark)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSubDark),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Unlock',
-                style: TextStyle(color: AppColors.primary)),
+            child: const Text(
+              'Unlock',
+              style: TextStyle(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -367,13 +469,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
             // ── Encryption Info ──
             ListTile(
-              leading:
-                  const Icon(Icons.lock_outline, color: AppColors.primary),
-              title: const Text('Encryption Info',
-                  style: TextStyle(color: AppColors.textMainDark)),
-              subtitle: const Text('End-to-end PGP encrypted',
-                  style:
-                      TextStyle(color: AppColors.textSubDark, fontSize: 12)),
+              leading: const Icon(Icons.lock_outline, color: AppColors.primary),
+              title: const Text(
+                'Encryption Info',
+                style: TextStyle(color: AppColors.textMainDark),
+              ),
+              subtitle: const Text(
+                'End-to-end PGP encrypted',
+                style: TextStyle(color: AppColors.textSubDark, fontSize: 12),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _showEncryptionInfoDialog();
@@ -381,36 +485,55 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
             // ── Auto-Delete ──
             ListTile(
-              leading:
-                  Icon(Icons.timer_outlined, color: AppColors.yellow600),
-              title: const Text('Auto-Delete',
-                  style: TextStyle(color: AppColors.textMainDark)),
+              leading: Icon(Icons.timer_outlined, color: AppColors.yellow600),
+              title: const Text(
+                'Auto-Delete',
+                style: TextStyle(color: AppColors.textMainDark),
+              ),
               subtitle: Text(
                 settings.autoDeleteEnabled
                     ? 'Active — ${settings.autoDeleteHours}h'
                     : 'Disabled',
                 style: const TextStyle(
-                    color: AppColors.textSubDark, fontSize: 12),
+                  color: AppColors.textSubDark,
+                  fontSize: 12,
+                ),
               ),
               onTap: () {
                 Navigator.pop(ctx);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const AutoDeleteScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const AutoDeleteScreen()),
                 );
               },
             ),
             // ── Clear Chat ──
             ListTile(
-              leading:
-                  const Icon(Icons.delete_outline, color: AppColors.error),
-              title: const Text('Clear Chat',
-                  style: TextStyle(color: AppColors.error)),
+              leading: const Icon(Icons.delete_outline, color: AppColors.error),
+              title: const Text(
+                'Clear Chat',
+                style: TextStyle(color: AppColors.error),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _confirmClearChat();
+              },
+            ),
+            // ── Block / Unblock ──
+            ListTile(
+              leading: Icon(
+                _isBlocked ? Icons.check_circle_outline : Icons.block,
+                color: _isBlocked ? AppColors.success : AppColors.warning,
+              ),
+              title: Text(
+                _isBlocked ? 'Unblock User' : 'Block User',
+                style: TextStyle(
+                  color: _isBlocked ? AppColors.success : AppColors.warning,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _toggleBlockUser();
               },
             ),
             const SizedBox(height: 8),
@@ -430,8 +553,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           children: [
             const Icon(Icons.lock, size: 20, color: AppColors.primary),
             const SizedBox(width: 8),
-            const Text('Encryption Info',
-                style: TextStyle(color: AppColors.textMainDark, fontSize: 17)),
+            const Text(
+              'Encryption Info',
+              style: TextStyle(color: AppColors.textMainDark, fontSize: 17),
+            ),
           ],
         ),
         content: Column(
@@ -440,12 +565,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           children: [
             const Text(
               'Messages in this chat are end-to-end encrypted using PGP (Pretty Good Privacy).',
-              style: TextStyle(color: AppColors.textSubDark, fontSize: 14, height: 1.5),
+              style: TextStyle(
+                color: AppColors.textSubDark,
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
             if (_fingerprint.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text('Recipient Fingerprint:',
-                  style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+              const Text(
+                'Recipient Fingerprint:',
+                style: TextStyle(color: AppColors.slate400, fontSize: 12),
+              ),
               const SizedBox(height: 4),
               Text(
                 _fingerprint,
@@ -474,8 +605,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Clear Chat',
-            style: TextStyle(color: AppColors.textMainDark)),
+        title: const Text(
+          'Clear Chat',
+          style: TextStyle(color: AppColors.textMainDark),
+        ),
         content: Text(
           'Delete all messages with ${widget.otherUsername}? This cannot be undone.',
           style: const TextStyle(color: AppColors.textSubDark),
@@ -483,13 +616,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSubDark)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSubDark),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Clear',
-                style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -504,9 +641,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         }
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to clear chat')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Failed to clear chat')));
         }
       } finally {
         if (mounted) setState(() => _isClearingChat = false);
@@ -526,382 +663,467 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       backgroundColor: AppColors.backgroundDark,
       body: ResponsiveScaffoldBody(
         child: Stack(
-        children: [
-          SafeArea(
-        child: Column(
           children: [
-            // ─── Custom App Bar ───
-            Container(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundDark,
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.slate800.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-              child: Row(
+            SafeArea(
+              child: Column(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back, size: 24),
-                    color: AppColors.slate300,
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // Name row with lock icon
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.lock,
-                                size: 14, color: AppColors.slate400),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                widget.otherUsername,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMainDark,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                            ),
-                          ],
+                  // ─── Custom App Bar ───
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundDark,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.slate800.withValues(alpha: 0.6),
                         ),
-                        const SizedBox(height: 2),
-                        // Subtitle: fingerprint + timer or "Online"
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_fingerprint.isNotEmpty) ...[
-                              Text(
-                                _fingerprint.length >= 8 ? '${_fingerprint.substring(0, 4)}...${_fingerprint.substring(_fingerprint.length - 4)}' : _fingerprint,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontFamily: 'monospace',
-                                  color: AppColors.slate500,
-                                ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back, size: 24),
+                          color: AppColors.slate300,
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              // Name row with lock icon
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.lock,
+                                    size: 14,
+                                    color: AppColors.slate400,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      widget.otherUsername,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textMainDark,
+                                        letterSpacing: -0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              if (autoDelete)
-                                const Text(' · ',
-                                    style: TextStyle(
+                              const SizedBox(height: 2),
+                              // Subtitle: fingerprint + timer or "Online"
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_fingerprint.isNotEmpty) ...[
+                                    Text(
+                                      _fingerprint.length >= 8
+                                          ? '${_fingerprint.substring(0, 4)}...${_fingerprint.substring(_fingerprint.length - 4)}'
+                                          : _fingerprint,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontFamily: 'monospace',
                                         color: AppColors.slate500,
-                                        fontSize: 12)),
-                            ],
-                            if (autoDelete) ...[
-                              Icon(Icons.timer_outlined,
-                                  size: 13, color: AppColors.yellow600),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${hours}h',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.yellow600,
-                                ),
+                                      ),
+                                    ),
+                                    if (autoDelete)
+                                      const Text(
+                                        ' · ',
+                                        style: TextStyle(
+                                          color: AppColors.slate500,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                  if (autoDelete) ...[
+                                    Icon(
+                                      Icons.timer_outlined,
+                                      size: 13,
+                                      color: AppColors.yellow600,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${hours}h',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.yellow600,
+                                      ),
+                                    ),
+                                  ] else if (_fingerprint.isEmpty) ...[
+                                    const Text(
+                                      'Online',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.slate500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ] else if (_fingerprint.isEmpty) ...[
-                              const Text(
-                                'Online',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.slate500,
-                                ),
-                              ),
                             ],
-                          ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _showChatMenu,
+                          icon: const Icon(Icons.more_vert, size: 24),
+                          color: AppColors.slate300,
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: _showChatMenu,
-                    icon: const Icon(Icons.more_vert, size: 24),
-                    color: AppColors.slate300,
+
+                  // ─── Compact Self-Destruct Banner ───
+                  if (autoDelete)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.yellow600.withValues(alpha: 0.08),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: AppColors.slate800.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.timer,
+                            size: 15,
+                            color: AppColors.yellow600,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Self-Destruct',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.yellow600,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${_remaining.inHours.toString().padLeft(2, '0')}:'
+                            '${(_remaining.inMinutes % 60).toString().padLeft(2, '0')}:'
+                            '${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'monospace',
+                              color: AppColors.yellow600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // ─── Messages List ───
+                  Expanded(
+                    child: chat.isLoading && chat.messages.isEmpty
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          )
+                        : chat.messages.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            controller: _scrollController,
+                            reverse: true,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            itemCount:
+                                chat.messages.length +
+                                1 +
+                                (_isUploadingImage ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              // Skeleton bubble at index 0 when uploading
+                              if (_isUploadingImage && index == 0) {
+                                return const _ImageUploadSkeleton();
+                              }
+                              final msgIndex = _isUploadingImage
+                                  ? index - 1
+                                  : index;
+                              // "Today" divider at end (top visually)
+                              if (msgIndex == chat.messages.length) {
+                                return _buildDateDivider('Today');
+                              }
+                              final msg = chat.messages[msgIndex];
+                              final isMine =
+                                  msg['sender_id'] != widget.otherUserId;
+
+                              // Screenshot alert — render as system message
+                              if (msg['signature'] == '__SCREENSHOT_ALERT__') {
+                                return _ScreenshotAlertBubble(
+                                  text: msg['encrypted_body'] as String? ?? '',
+                                  timestamp: msg['created_at'] as String? ?? '',
+                                );
+                              }
+
+                              return _MessageBubble(
+                                encryptedBody:
+                                    msg['encrypted_body'] as String? ?? '',
+                                isMine: isMine,
+                                timestamp: msg['created_at'] as String? ?? '',
+                                senderName: widget.otherUsername,
+                                senderInitials: _getInitials(
+                                  widget.otherUsername,
+                                ),
+                                autoDeleteEnabled: autoDelete,
+                                autoDeleteHours: hours,
+                                messageCreatedAt: msg['created_at']?.toString(),
+                                onDecrypt: _decryptMessage,
+                              );
+                            },
+                          ),
+                  ),
+
+                  // ─── Encryption notice (non-autodelete mode) ───
+                  if (!autoDelete)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.verified_user_outlined,
+                            size: 14,
+                            color: AppColors.slate500,
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Messages are end-to-end PGP encrypted.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.slate500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // ─── No PGP key warning ───
+                  if (!_isCheckingKey &&
+                      (_otherPublicKey == null || _otherPublicKey!.isEmpty))
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Color(0xFFF59E0B),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'This user has no PGP key — messages cannot be sent until they set one up.',
+                              style: TextStyle(
+                                color: Color(0xFFF59E0B),
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  if (_isBlocked)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.block, color: AppColors.error, size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'You blocked this user. Unblock to send messages.',
+                              style: TextStyle(
+                                color: AppColors.error,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // ─── Input Bar ───
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      border: Border(
+                        top: BorderSide(
+                          color: AppColors.slate800.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Attachment / plus button
+                          Container(
+                            width: 40,
+                            height: 40,
+                            margin: const EdgeInsets.only(bottom: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.slate800.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              onPressed: _isBlocked ? null : _pickAndSendImage,
+                              icon: const Icon(Icons.add, size: 22),
+                              color: _isBlocked
+                                  ? AppColors.slate600
+                                  : AppColors.slate400,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Text field (no mic)
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.backgroundDark,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: AppColors.slate800.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              child: TextField(
+                                controller: _messageController,
+                                enabled: !_isBlocked,
+                                style: const TextStyle(
+                                  color: AppColors.textMainDark,
+                                  fontSize: 15,
+                                ),
+                                maxLines: 4,
+                                minLines: 1,
+                                decoration: InputDecoration(
+                                  hintText: _isBlocked
+                                      ? 'User is blocked'
+                                      : autoDelete
+                                      ? 'Encrypted message...'
+                                      : 'Message',
+                                  hintStyle: const TextStyle(
+                                    color: AppColors.slate500,
+                                    fontSize: 15,
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Send button
+                          Container(
+                            width: 44,
+                            height: 44,
+                            margin: const EdgeInsets.only(bottom: 2),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.send, size: 20),
+                              color: Colors.white,
+                              padding: EdgeInsets.zero,
+                              onPressed: _isBlocked ? null : _sendMessage,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-
-            // ─── Compact Self-Destruct Banner ───
-            if (autoDelete)
+            // ─── Clear-chat loading overlay ───
+            if (_isClearingChat)
               Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.yellow600.withValues(alpha: 0.08),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: AppColors.slate800.withValues(alpha: 0.6),
+                color: Colors.black54,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 24,
                     ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.timer, size: 15, color: AppColors.yellow600),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Self-Destruct',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.yellow600,
-                      ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const Spacer(),
-                    Text(
-                      '${_remaining.inHours.toString().padLeft(2, '0')}:'
-                      '${(_remaining.inMinutes % 60).toString().padLeft(2, '0')}:'
-                      '${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
-                        color: AppColors.yellow600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ─── Messages List ───
-            Expanded(
-              child: chat.isLoading && chat.messages.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary))
-                  : chat.messages.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          reverse: true,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          itemCount: chat.messages.length + 1 + (_isUploadingImage ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            // Skeleton bubble at index 0 when uploading
-                            if (_isUploadingImage && index == 0) {
-                              return const _ImageUploadSkeleton();
-                            }
-                            final msgIndex = _isUploadingImage ? index - 1 : index;
-                            // "Today" divider at end (top visually)
-                            if (msgIndex == chat.messages.length) {
-                              return _buildDateDivider('Today');
-                            }
-                            final msg = chat.messages[msgIndex];
-                            final isMine =
-                                msg['sender_id'] != widget.otherUserId;
-
-                            // Screenshot alert — render as system message
-                            if (msg['signature'] == '__SCREENSHOT_ALERT__') {
-                              return _ScreenshotAlertBubble(
-                                text: msg['encrypted_body'] as String? ?? '',
-                                timestamp: msg['created_at'] as String? ?? '',
-                              );
-                            }
-
-                            return _MessageBubble(
-                              encryptedBody:
-                                  msg['encrypted_body'] as String? ?? '',
-                              isMine: isMine,
-                              timestamp:
-                                  msg['created_at'] as String? ?? '',
-                              senderName: widget.otherUsername,
-                              senderInitials:
-                                  _getInitials(widget.otherUsername),
-                              autoDeleteEnabled: autoDelete,
-                              autoDeleteHours: hours,
-                              messageCreatedAt:
-                                  msg['created_at']?.toString(),
-                              onDecrypt: _decryptMessage,
-                            );
-                          },
-                        ),
-            ),
-
-            // ─── Encryption notice (non-autodelete mode) ───
-            if (!autoDelete)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.verified_user_outlined,
-                        size: 14, color: AppColors.slate500),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Messages are end-to-end PGP encrypted.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.slate500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ─── No PGP key warning ───
-            if (!_isCheckingKey && (_otherPublicKey == null || _otherPublicKey!.isEmpty))
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        color: Color(0xFFF59E0B), size: 16),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'This user has no PGP key — messages cannot be sent until they set one up.',
-                        style: TextStyle(
-                          color: Color(0xFFF59E0B),
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ─── Input Bar ───
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                border: Border(
-                  top: BorderSide(
-                    color: AppColors.slate800.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Attachment / plus button
-                    Container(
-                      width: 40,
-                      height: 40,
-                      margin: const EdgeInsets.only(bottom: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.slate800.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        onPressed: _pickAndSendImage,
-                        icon: const Icon(Icons.add, size: 22),
-                        color: AppColors.slate400,
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Text field (no mic)
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.backgroundDark,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color:
-                                AppColors.slate800.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: TextField(
-                          controller: _messageController,
-                          style: const TextStyle(
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: AppColors.primary),
+                        SizedBox(height: 16),
+                        Text(
+                          'Clearing chat…',
+                          style: TextStyle(
                             color: AppColors.textMainDark,
                             fontSize: 15,
-                          ),
-                          maxLines: 4,
-                          minLines: 1,
-                          decoration: InputDecoration(
-                            hintText: autoDelete
-                                ? 'Encrypted message...'
-                                : 'Message',
-                            hintStyle: const TextStyle(
-                              color: AppColors.slate500,
-                              fontSize: 15,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 10),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    // Send button
-                    Container(
-                      width: 44,
-                      height: 44,
-                      margin: const EdgeInsets.only(bottom: 2),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.send, size: 20),
-                        color: Colors.white,
-                        padding: EdgeInsets.zero,
-                        onPressed: _sendMessage,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            if (_isTogglingBlock)
+              Container(
+                color: Colors.black38,
+                child: const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              ),
           ],
         ),
-      ),
-          // ─── Clear-chat loading overlay ───
-          if (_isClearingChat)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(color: AppColors.primary),
-                      SizedBox(height: 16),
-                      Text(
-                        'Clearing chat…',
-                        style: TextStyle(
-                          color: AppColors.textMainDark,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
       ),
     );
   }
@@ -911,9 +1133,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline,
-              size: 48,
-              color: AppColors.textSubDark.withValues(alpha: 0.5)),
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 48,
+            color: AppColors.textSubDark.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 12),
           const Text(
             'No messages yet',
@@ -935,14 +1159,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       child: Row(
         children: [
           Expanded(
-              child: Divider(
-                  color: AppColors.slate800.withValues(alpha: 0.5),
-                  height: 1)),
+            child: Divider(
+              color: AppColors.slate800.withValues(alpha: 0.5),
+              height: 1,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.surfaceDark,
                 borderRadius: BorderRadius.circular(12),
@@ -958,9 +1183,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
           ),
           Expanded(
-              child: Divider(
-                  color: AppColors.slate800.withValues(alpha: 0.5),
-                  height: 1)),
+            child: Divider(
+              color: AppColors.slate800.withValues(alpha: 0.5),
+              height: 1,
+            ),
+          ),
         ],
       ),
     );
@@ -1095,14 +1322,12 @@ class _MessageBubbleState extends State<_MessageBubble> {
               padding: const EdgeInsets.only(bottom: 4, right: 4),
               child: Text(
                 time,
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.slate500),
+                style: const TextStyle(fontSize: 11, color: AppColors.slate500),
               ),
             ),
           // Blue bubble
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: const BoxDecoration(
               color: AppColors.primary,
               borderRadius: BorderRadius.only(
@@ -1121,18 +1346,19 @@ class _MessageBubbleState extends State<_MessageBubble> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (widget.autoDeleteEnabled) ...[
-                  Icon(Icons.timer_outlined,
-                      size: 12, color: AppColors.yellow600),
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 12,
+                    color: AppColors.yellow600,
+                  ),
                   const SizedBox(width: 3),
                   Text(
                     _formatExpiry(),
-                    style: TextStyle(
-                        fontSize: 11, color: AppColors.yellow600),
+                    style: TextStyle(fontSize: 11, color: AppColors.yellow600),
                   ),
                   const SizedBox(width: 6),
                 ],
-                const Icon(Icons.done_all,
-                    size: 14, color: AppColors.primary),
+                const Icon(Icons.done_all, size: 14, color: AppColors.primary),
               ],
             ),
           ),
@@ -1204,7 +1430,9 @@ class _MessageBubbleState extends State<_MessageBubble> {
                 // Dark bubble
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: const BoxDecoration(
                     color: AppColors.surfaceHoverDark,
                     borderRadius: BorderRadius.only(
@@ -1219,18 +1447,22 @@ class _MessageBubbleState extends State<_MessageBubble> {
                 // Expiry label
                 if (widget.autoDeleteEnabled)
                   Padding(
-                    padding:
-                        const EdgeInsets.only(top: 4, left: 4, bottom: 8),
+                    padding: const EdgeInsets.only(top: 4, left: 4, bottom: 8),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.timer_outlined,
-                            size: 12, color: AppColors.yellow600),
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 12,
+                          color: AppColors.yellow600,
+                        ),
                         const SizedBox(width: 3),
                         Text(
                           _formatExpiry(),
                           style: TextStyle(
-                              fontSize: 11, color: AppColors.yellow600),
+                            fontSize: 11,
+                            color: AppColors.yellow600,
+                          ),
                         ),
                       ],
                     ),
@@ -1304,7 +1536,11 @@ class _MessageBubbleState extends State<_MessageBubble> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.lock_reset, size: 14, color: Color(0xFFEF4444)),
+                const Icon(
+                  Icons.lock_reset,
+                  size: 14,
+                  color: Color(0xFFEF4444),
+                ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
@@ -1327,11 +1563,7 @@ class _MessageBubbleState extends State<_MessageBubble> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.lock_outline,
-            size: 14,
-            color: AppColors.textSubDark,
-          ),
+          Icon(Icons.lock_outline, size: 14, color: AppColors.textSubDark),
           const SizedBox(width: 6),
           Text(
             'Tap to decrypt',
@@ -1413,8 +1645,10 @@ class _NetworkImageState extends State<_NetworkImage> {
         width: 220,
         height: 60,
         child: Center(
-          child: Text('Image unavailable',
-              style: TextStyle(color: Colors.white54, fontSize: 13)),
+          child: Text(
+            'Image unavailable',
+            style: TextStyle(color: Colors.white54, fontSize: 13),
+          ),
         ),
       );
     }
@@ -1425,8 +1659,8 @@ class _NetworkImageState extends State<_NetworkImage> {
         fit: BoxFit.cover,
         width: 220,
         gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => const Text('Image error',
-            style: TextStyle(color: Colors.white54)),
+        errorBuilder: (_, __, ___) =>
+            const Text('Image error', style: TextStyle(color: Colors.white54)),
       ),
     );
   }
@@ -1452,9 +1686,10 @@ class _ImageUploadSkeletonState extends State<_ImageUploadSkeleton>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
-    _shimmer = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _shimmer = Tween<double>(
+      begin: 0.3,
+      end: 0.7,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -1483,16 +1718,20 @@ class _ImageUploadSkeletonState extends State<_ImageUploadSkeleton>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.image_outlined,
-                      size: 32, color: Colors.white.withValues(alpha: 0.6)),
+                  Icon(
+                    Icons.image_outlined,
+                    size: 32,
+                    color: Colors.white.withValues(alpha: 0.6),
+                  ),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: 80,
                     height: 3,
                     child: LinearProgressIndicator(
                       backgroundColor: Colors.white24,
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.white70),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.white70,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1519,10 +1758,7 @@ class _ScreenshotAlertBubble extends StatelessWidget {
   final String text;
   final String timestamp;
 
-  const _ScreenshotAlertBubble({
-    required this.text,
-    required this.timestamp,
-  });
+  const _ScreenshotAlertBubble({required this.text, required this.timestamp});
 
   String _formatTime(String ts) {
     try {
@@ -1547,16 +1783,16 @@ class _ScreenshotAlertBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0x33EF4444), // translucent red
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0x55EF4444),
-              width: 1,
-            ),
+            border: Border.all(color: const Color(0x55EF4444), width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded,
-                  size: 16, color: Color(0xFFEF4444)),
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 16,
+                color: Color(0xFFEF4444),
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(

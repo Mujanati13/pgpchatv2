@@ -109,6 +109,40 @@ router.put('/:contactId/block', async (req, res) => {
   }
 });
 
+// PUT /api/contacts/user/:userId/block
+router.put('/user/:userId/block', async (req, res) => {
+  try {
+    const { blocked } = req.body; // true or false
+    const targetUserId = req.params.userId;
+
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'userId required' });
+    }
+    if (targetUserId === req.userId) {
+      return res.status(400).json({ error: 'Cannot block yourself' });
+    }
+
+    if (blocked) {
+      await pool.execute(
+        `INSERT INTO contacts (id, owner_id, contact_user_id, is_blocked)
+         VALUES (?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE is_blocked = 1`,
+        [uuidv4(), req.userId, targetUserId]
+      );
+    } else {
+      await pool.execute(
+        'UPDATE contacts SET is_blocked = 0 WHERE owner_id = ? AND contact_user_id = ?',
+        [req.userId, targetUserId]
+      );
+    }
+
+    res.json({ success: true, isBlocked: !!blocked });
+  } catch (err) {
+    console.error('[Contacts] Block by user error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/contacts/block-key  — block by PGP public key fingerprint
 router.post('/block-key', async (req, res) => {
   try {

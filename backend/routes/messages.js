@@ -65,6 +65,15 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ error: 'You are blocked by this user' });
     }
 
+    // Check if sender has blocked this recipient
+    const [blockedByMe] = await pool.execute(
+      'SELECT is_blocked FROM contacts WHERE owner_id = ? AND contact_user_id = ? AND is_blocked = 1',
+      [req.userId, recipientId]
+    );
+    if (blockedByMe.length > 0) {
+      return res.status(403).json({ error: 'Unblock this user before sending messages' });
+    }
+
     const messageId = uuidv4();
     await pool.execute(
       'INSERT INTO messages (id, sender_id, recipient_id, encrypted_body, signature) VALUES (?, ?, ?, ?, ?)',
