@@ -13,6 +13,7 @@ import 'pgp_encrypt_screen.dart';
 import 'pgp_decrypt_screen.dart';
 import 'pgp_sign_screen.dart';
 import 'pgp_verify_screen.dart';
+import 'backup_recovery_screen.dart';
 
 class ManagePgpScreen extends StatelessWidget {
   const ManagePgpScreen({super.key});
@@ -212,6 +213,37 @@ class ManagePgpScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 32),
                 children: [
+                  // Backup & Recovery Section
+                  const _SectionTitle(title: 'Backup & Recovery'),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 0),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCardDark,
+                      border: Border.symmetric(
+                        horizontal: BorderSide(color: AppColors.slate800),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _SettingsItem(
+                          icon: Icons.backup,
+                          iconColor: AppColors.emerald500,
+                          iconBgColor:
+                              AppColors.emerald500.withValues(alpha: 0.1),
+                          title: 'Backup & Recovery',
+                          subtitle: 'Create and manage your recovery seed phrase',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const BackupRecoveryScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Key Management Section
                   const _SectionTitle(title: 'Key Management'),
                   Container(

@@ -11,6 +11,7 @@ import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
 import '../services/screenshot_service.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/responsive_center.dart';
 import 'auto_delete_screen.dart';
 
@@ -55,6 +56,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ChatProvider>().startMessagePolling(widget.otherUserId);
       context.read<ChatProvider>().markRead(widget.otherUserId);
+      PushNotificationService().clearNotificationBadge();
       await _loadBlockStatus();
       await _fetchLatestPublicKey();
       _loadFingerprint();
