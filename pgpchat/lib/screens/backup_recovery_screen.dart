@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../theme/app_theme.dart';
 import '../services/seed_backup_service.dart';
+import '../services/api_service.dart';
 import '../widgets/responsive_center.dart';
 
 class BackupRecoveryScreen extends StatefulWidget {
@@ -13,11 +16,14 @@ class BackupRecoveryScreen extends StatefulWidget {
 
 class _BackupRecoveryScreenState extends State<BackupRecoveryScreen> {
   final _seedBackup = SeedBackupService();
+  final _api = ApiService();
   String? _seedPhrase;
   bool _showSeed = false;
   bool _loading = true;
+  bool _syncing = false;
   String? _error;
   int _step = 0; // 0: view, 1: confirm, 2: done
+  String? _syncStatus;
 
   @override
   void initState() {
@@ -98,6 +104,39 @@ class _BackupRecoveryScreenState extends State<BackupRecoveryScreen> {
 
   void _confirmSeedPhrase() {
     setState(() => _step = 1);
+  }
+
+  Future<void> _syncCheckpointToServer() async {
+    if (_seedPhrase == null) return;
+
+    setState(() => _syncing = true);
+    try {
+      // Calculate checkpoint (SHA256 hash of seed phrase)
+      final checkpoint = sha256.convert(utf8.encode(_seedPhrase!)).toString();
+
+      // Send checkpoint to server
+      await _api.backupSeedCheckpoint(checkpoint);
+
+      if (mounted) {
+        setState(() {
+          _syncStatus = 'Checkpoint synced to server successfully!';
+          _syncing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Seed backup synced to server'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _syncStatus = 'Server sync failed: ${e.toString()}';
+          _syncing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -466,6 +505,79 @@ class _BackupRecoveryScreenState extends State<BackupRecoveryScreen> {
                               height: 1.5,
                             ),
                           ),
+                          const SizedBox(height: 24),
+                          if (_syncStatus != null)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _syncStatus!.contains('failed')
+                                    ? Colors.red.withValues(alpha: 0.1)
+                                    : AppColors.success.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _syncStatus!.contains('failed')
+                                      ? Colors.red.withValues(alpha: 0.3)
+                                      : AppColors.success.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _syncStatus!.contains('failed')
+                                        ? Icons.error_outline
+                                        : Icons.check_circle_outline,
+                                    color: _syncStatus!.contains('failed')
+                                        ? Colors.red
+                                        : AppColors.success,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _syncStatus!,
+                                      style: TextStyle(
+                                        color: _syncStatus!.contains('failed')
+                                            ? Colors.red
+                                            : AppColors.success,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (_syncStatus == null) ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                onPressed: _syncing ? null : _syncCheckpointToServer,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: _syncing
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
+                                        ),
+                                      )
+                                    : const Icon(Icons.cloud_upload, size: 18),
+                                label: Text(_syncing
+                                    ? 'Syncing...'
+                                    : 'Sync Backup to Server'),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 32),
                           SizedBox(
                             width: double.infinity,

@@ -67,7 +67,10 @@ class _RecoverScreenState extends State<RecoverScreen> {
 
     setState(() { _loading = true; _error = null; });
     try {
-      final result = await _api.requestRecovery(username);
+      final result = await _api.post('/auth/recover-request', body: {
+        'username': username,
+        'recoveryMethod': 'pgp',
+      });
       _encryptedChallenge = result['encryptedChallenge'] as String;
       setState(() { _step = 2; _loading = false; });
     } on ApiException catch (e) {
@@ -88,7 +91,10 @@ class _RecoverScreenState extends State<RecoverScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       // API call to initiate seed-based recovery
-      await _api.requestRecovery(username);
+      await _api.post('/auth/recover-request', body: {
+        'username': username,
+        'recoveryMethod': 'seed',
+      });
       // Move directly to seed verification step
       setState(() { _step = 2; _loading = false; });
     } on ApiException catch (e) {
@@ -195,6 +201,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
         _usernameController.text.trim(),
         _decryptedToken!,
         password,
+        method: _recoveryMethod,
       );
       setState(() { _step = 4; _loading = false; });
     } on ApiException catch (e) {

@@ -121,6 +121,24 @@ async function initializeDatabase() {
     } catch (e) {
       if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     }
+
+    try {
+      await conn.execute(
+        `ALTER TABLE users ADD COLUMN seed_checkpoint VARCHAR(255) NULL DEFAULT NULL`
+      );
+      console.log('[DB] Migration: added seed_checkpoint to users');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
+
+    try {
+      await conn.execute(
+        `ALTER TABLE users ADD COLUMN recovery_method VARCHAR(20) NULL DEFAULT 'pgp'`
+      );
+      console.log('[DB] Migration: added recovery_method to users');
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
   } finally {
     conn.release();
   }

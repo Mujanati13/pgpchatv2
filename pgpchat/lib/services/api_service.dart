@@ -181,6 +181,7 @@ class ApiService {
     String username,
     String challenge,
     String newPassword,
+    {String method = 'pgp'} // 'pgp' or 'seed'
   ) async {
     return post(
       '/auth/recover-confirm',
@@ -188,7 +189,16 @@ class ApiService {
         'username': username,
         'challenge': challenge,
         'newPassword': newPassword,
+        'recoveryMethod': method,
       },
+    );
+  }
+
+  // Save seed phrase checkpoint for recovery
+  Future<Map<String, dynamic>> backupSeedCheckpoint(String seedCheckpoint) async {
+    return post(
+      '/auth/backup-seed',
+      body: {'seedCheckpoint': seedCheckpoint},
     );
   }
 
