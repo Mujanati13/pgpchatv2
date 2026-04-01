@@ -132,7 +132,7 @@ class _BackupRecoveryScreenState extends State<BackupRecoveryScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _syncStatus = 'Server sync failed: ${e.toString()}';
+          _syncStatus = 'Could not sync backup to server. Check your connection and try again.';
           _syncing = false;
         });
       }

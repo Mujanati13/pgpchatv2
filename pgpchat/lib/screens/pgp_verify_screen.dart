@@ -74,7 +74,7 @@ class _PgpVerifyScreenState extends State<PgpVerifyScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Verification failed: $e';
+        _error = 'Could not verify signature. Check the message, signature, and public key, then try again.';
         _loading = false;
       });
     }

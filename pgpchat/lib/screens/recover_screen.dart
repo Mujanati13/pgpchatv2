@@ -38,6 +38,24 @@ class _RecoverScreenState extends State<RecoverScreen> {
   String? _encryptedChallenge;
   String? _decryptedToken;
 
+  String _friendlyRecoverError(Object error) {
+    final raw = error.toString().replaceFirst(RegExp(r'^Exception:\\s*'), '');
+    final lower = raw.toLowerCase();
+
+    if (lower.contains('network') ||
+        lower.contains('socket') ||
+        lower.contains('connection') ||
+        lower.contains('timeout')) {
+      return 'Could not connect to the server. Please check your internet and try again.';
+    }
+
+    if (lower.contains('seed phrase')) {
+      return raw;
+    }
+
+    return 'Something went wrong. Please try again.';
+  }
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -76,7 +94,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
     } on ApiException catch (e) {
       setState(() { _error = e.message; _loading = false; });
     } catch (e) {
-      setState(() { _error = 'Failed to request recovery'; _loading = false; });
+      setState(() { _error = _friendlyRecoverError(e); _loading = false; });
     }
   }
 
@@ -100,7 +118,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
     } on ApiException catch (e) {
       setState(() { _error = e.message; _loading = false; });
     } catch (e) {
-      setState(() { _error = 'Failed to request recovery'; _loading = false; });
+      setState(() { _error = _friendlyRecoverError(e); _loading = false; });
     }
   }
 
@@ -128,7 +146,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
       setState(() { _step = 3; _error = null; _loading = false; });
     } catch (e) {
       setState(() {
-        _error = 'PGP Decryption Failed: ${e.toString()}';
+        _error = 'Could not decrypt the recovery challenge. Check your passphrase and private key, then try again.';
         _decryptedToken = null;
         _loading = false;
       });
@@ -165,7 +183,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
       setState(() { _step = 3; _error = null; _loading = false; });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = _friendlyRecoverError(e);
         _decryptedToken = null;
         _loading = false;
       });
@@ -205,9 +223,9 @@ class _RecoverScreenState extends State<RecoverScreen> {
       );
       setState(() { _step = 4; _loading = false; });
     } on ApiException catch (e) {
-      setState(() { _error = 'Server Error: ${e.message}'; _loading = false; });
+      setState(() { _error = e.message; _loading = false; });
     } catch (e) {
-      setState(() { _error = 'Failed to reset password: ${e.toString()}'; _loading = false; });
+      setState(() { _error = _friendlyRecoverError(e); _loading = false; });
     }
   }
 

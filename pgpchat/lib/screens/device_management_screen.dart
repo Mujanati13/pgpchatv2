@@ -36,7 +36,7 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
     } on ApiException catch (e) {
       setState(() => _isLoading = false);
       if (e.statusCode != 401) {
-        _showError('Failed to load sessions: ${e.message}');
+        _showError('Could not load your active sessions right now. Please try again.');
       }
       // 401 is handled globally by ApiService.onUnauthorized
     } catch (_) {
@@ -50,7 +50,7 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
       _loadSessions();
     } on ApiException catch (e) {
       if (e.statusCode != 401) {
-        _showError('Failed to terminate session: ${e.message}');
+        _showError('Could not log out that device right now. Please try again.');
       }
       // 401 is handled globally
     }
@@ -89,7 +89,7 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
         _loadSessions();
       } on ApiException catch (e) {
         if (e.statusCode != 401) {
-          _showError('Failed to terminate sessions: ${e.message}');
+          _showError('Could not log out all other devices right now. Please try again.');
         }
         // 401 is handled globally
       }

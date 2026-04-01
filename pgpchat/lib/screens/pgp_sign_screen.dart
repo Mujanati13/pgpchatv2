@@ -46,8 +46,11 @@ class _PgpSignScreenState extends State<PgpSignScreen> {
         _loading = false;
       });
     } catch (e) {
+      final raw = e.toString().toLowerCase();
       setState(() {
-        _error = 'Signing failed: $e';
+        _error = (raw.contains('passphrase') || raw.contains('password'))
+            ? 'Could not sign message. The passphrase appears to be incorrect.'
+            : 'Could not sign the message. Verify your private key and try again.';
         _loading = false;
       });
     }

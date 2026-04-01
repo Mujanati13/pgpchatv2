@@ -46,8 +46,14 @@ class _PgpDecryptScreenState extends State<PgpDecryptScreen> {
         _loading = false;
       });
     } catch (e) {
+      final raw = e.toString().toLowerCase();
       setState(() {
-        _error = 'Decryption failed: $e';
+        _error = (raw.contains('passphrase') ||
+                raw.contains('password') ||
+                raw.contains('checksum') ||
+                raw.contains('s2k'))
+            ? 'Could not decrypt. The passphrase appears to be incorrect.'
+            : 'Could not decrypt this message. Verify your private key and encrypted text, then try again.';
         _loading = false;
       });
     }

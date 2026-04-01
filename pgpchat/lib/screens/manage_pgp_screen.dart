@@ -104,7 +104,9 @@ class ManagePgpScreen extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sync failed: $e')),
+          const SnackBar(
+            content: Text('Could not sync public key right now. Please check your connection and try again.'),
+          ),
         );
       }
     }

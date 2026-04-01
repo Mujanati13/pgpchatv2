@@ -21,8 +21,12 @@ class PgpService extends ChangeNotifier {
 
   Future<bool> get hasKeyPair async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_privateKeyPref) &&
-        prefs.containsKey(_publicKeyPref);
+    final priv = prefs.getString(_privateKeyPref);
+    final pub = prefs.getString(_publicKeyPref);
+    return priv != null &&
+      priv.trim().isNotEmpty &&
+      pub != null &&
+      pub.trim().isNotEmpty;
   }
 
   Future<String?> get publicKey async {
@@ -75,10 +79,26 @@ class PgpService extends ChangeNotifier {
     required String privateKey,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_publicKeyPref, publicKey);
-    await prefs.setString(_privateKeyPref, privateKey);
-    _publicKey = publicKey;
-    _privateKey = privateKey;
+
+    final normalizedPublic = publicKey.trim();
+    final normalizedPrivate = privateKey.trim();
+
+    if (normalizedPublic.isEmpty) {
+      await prefs.remove(_publicKeyPref);
+      _publicKey = null;
+    } else {
+      await prefs.setString(_publicKeyPref, normalizedPublic);
+      _publicKey = normalizedPublic;
+    }
+
+    if (normalizedPrivate.isEmpty) {
+      await prefs.remove(_privateKeyPref);
+      _privateKey = null;
+    } else {
+      await prefs.setString(_privateKeyPref, normalizedPrivate);
+      _privateKey = normalizedPrivate;
+    }
+
     notifyListeners();
   }
 

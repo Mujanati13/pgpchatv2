@@ -82,7 +82,9 @@ class _KeygenStep3ScreenState extends State<KeygenStep3Screen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Key generation failed: $e')),
+        const SnackBar(
+          content: Text('Key generation failed. Please try again.'),
+        ),
       );
       Navigator.pop(context);
     }

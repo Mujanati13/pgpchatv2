@@ -67,7 +67,7 @@ class _PgpEncryptScreenState extends State<PgpEncryptScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Encryption failed: $e';
+        _error = 'Could not encrypt the message. Make sure the public key is valid and try again.';
         _loading = false;
       });
     }

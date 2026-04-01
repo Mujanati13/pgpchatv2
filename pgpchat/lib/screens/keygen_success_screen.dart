@@ -223,7 +223,9 @@ class KeygenSuccessScreen extends StatelessWidget {
                                   } catch (e) {
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Sync failed — try again from Manage PGP: $e')),
+                                        const SnackBar(
+                                          content: Text('Sync failed. Open Manage PGP and try syncing again.'),
+                                        ),
                                       );
                                     }
                                   }
@@ -254,7 +256,9 @@ class KeygenSuccessScreen extends StatelessWidget {
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
+                              const SnackBar(
+                                content: Text('Could not export private key. Please try again.'),
+                              ),
                             );
                           }
                         }
@@ -277,7 +281,9 @@ class KeygenSuccessScreen extends StatelessWidget {
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
+                              const SnackBar(
+                                content: Text('Could not export public key. Please try again.'),
+                              ),
                             );
                           }
                         }

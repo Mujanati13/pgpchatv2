@@ -258,6 +258,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (text.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
 
+    await _refreshRecipientPublicKeyBeforeSend();
+    if (!mounted || _disposed) return;
+
     if (_isCheckingKey) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Checking recipient PGP key...')),
@@ -301,13 +304,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         }
       }
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Encryption failed: $e')));
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Message could not be encrypted. Check the recipient key and try again.',
+          ),
+        ),
+      );
     }
   }
 
   Future<void> _pickAndSendImage() async {
     // Capture messenger before any async gap to avoid deactivated-widget error
     final messenger = ScaffoldMessenger.of(context);
+
+    await _refreshRecipientPublicKeyBeforeSend();
+    if (!mounted || _disposed) return;
 
     if (_otherPublicKey == null) {
       messenger.showSnackBar(
@@ -377,15 +389,39 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed to send image: $e')),
+        const SnackBar(
+          content: Text(
+            'Image could not be sent. Check your connection and try again.',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
     }
   }
 
+  Future<void> _refreshRecipientPublicKeyBeforeSend() async {
+    try {
+      final latest = await _api.getUserPublicKey(widget.otherUserId);
+      if (latest == null || latest.isEmpty || latest == _otherPublicKey) return;
+
+      if (!mounted || _disposed) return;
+      setState(() {
+        _otherPublicKey = latest;
+        _fingerprint = _pgp.getFingerprint(latest);
+      });
+    } catch (_) {
+      // Best-effort refresh. Existing key (if any) remains in use.
+    }
+  }
+
   // Returns null on cancel, '\x00FAIL:reason' on error, decrypted text on success.
   Future<String?> _decryptMessage(String encryptedBody) async {
+    final privateKey = await _pgp.privateKey;
+    if (privateKey == null || privateKey.trim().isEmpty) {
+      return '\x00FAIL:Cannot decrypt on this device because your private key is missing. Open Manage PGP and import your private key backup.';
+    }
+
     if (_passphrase == null) {
       _passphrase = await _showPassphraseDialog();
       if (_passphrase == null) return null; // user cancelled
@@ -406,7 +442,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (err.contains('incorrect key') || err.contains('no valid openpgp')) {
         return '\x00FAIL:Encrypted with a different key';
       }
-      return '\x00FAIL:${e.toString()}';
+      return '\x00FAIL:Unable to decrypt this message with the current key and passphrase';
     }
   }
 
@@ -1250,6 +1286,25 @@ class _MessageBubbleState extends State<_MessageBubble> {
   bool _decryptFailed = false;
   String _failReason = '';
 
+  String _friendlyFailReason(String raw) {
+    final text = raw.trim();
+    final lower = text.toLowerCase();
+
+    if (lower.contains('no private key') || lower.contains('private key is missing')) {
+      return 'Cannot decrypt here: private key missing. Import your private key in Manage PGP, then tap to retry.';
+    }
+
+    if (lower.contains('different key') || lower.contains('incorrect key')) {
+      return 'Cannot decrypt: message was encrypted for a different key pair. Sync/import keys on both accounts and ask sender to resend.';
+    }
+
+    if (lower.contains('wrong passphrase') || lower.contains('passphrase')) {
+      return 'Wrong passphrase. Enter your PGP passphrase again and tap to retry.';
+    }
+
+    return 'Decryption failed. Check your passphrase and key, then tap to retry.';
+  }
+
   Future<void> _decrypt() async {
     setState(() {
       _isDecrypting = true;
@@ -1549,6 +1604,7 @@ class _MessageBubbleState extends State<_MessageBubble> {
     }
     // Decryption failed — show error and retry prompt
     if (_decryptFailed) {
+      final failMessage = _friendlyFailReason(_failReason);
       return GestureDetector(
         onTap: _decrypt,
         child: Column(
@@ -1566,7 +1622,7 @@ class _MessageBubbleState extends State<_MessageBubble> {
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    '${_failReason.isNotEmpty ? _failReason : 'Decryption failed'} \u2014 tap to retry',
+                    failMessage,
                     style: TextStyle(
                       color: Color(0xFFEF4444),
                       fontSize: 13,
