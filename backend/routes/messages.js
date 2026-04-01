@@ -56,6 +56,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'recipientId and encryptedBody required' });
     }
 
+    if (recipientId === req.userId) {
+      return res.status(400).json({ error: 'Cannot send a message to yourself' });
+    }
+
     // Check if sender is blocked by recipient
     const [blocked] = await pool.execute(
       'SELECT is_blocked FROM contacts WHERE owner_id = ? AND contact_user_id = ? AND is_blocked = 1',

@@ -67,7 +67,21 @@ async function sendNewMessagePush({ recipientId, senderId, senderUsername }) {
       [recipientId]
     );
 
-    const tokens = rows.map((r) => r.push_token).filter(Boolean);
+    let tokens = rows.map((r) => r.push_token).filter(Boolean);
+
+    if (senderId) {
+      const [senderRows] = await pool.execute(
+        `SELECT DISTINCT push_token
+         FROM sessions
+         WHERE user_id = ? AND push_token IS NOT NULL AND push_token != ''`,
+        [senderId]
+      );
+      const senderTokens = new Set(
+        senderRows.map((r) => r.push_token).filter(Boolean)
+      );
+      tokens = tokens.filter((token) => !senderTokens.has(token));
+    }
+
     if (!tokens.length) {
       console.log('[Push] No registered tokens for recipient:', recipientId);
       return;

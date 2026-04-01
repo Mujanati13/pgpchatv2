@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 
 const AndroidNotificationChannel _messagesChannel = AndroidNotificationChannel(
@@ -21,8 +24,25 @@ class PushNotificationService {
   final ApiService _api = ApiService();
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  final StreamController<String> _incomingMessageController =
+      StreamController<String>.broadcast();
+  final StreamController<String> _openConversationController =
+      StreamController<String>.broadcast();
   bool _initialized = false;
   bool _localNotificationsReady = false;
+  String? _pendingOpenConversationUserId;
+
+  // Emits sender user IDs as soon as a new-message push is received.
+  Stream<String> get incomingMessageStream => _incomingMessageController.stream;
+
+  // Emits sender user IDs when user taps a push/local notification.
+  Stream<String> get openConversationStream => _openConversationController.stream;
+
+  String? consumePendingOpenConversationUserId() {
+    final pending = _pendingOpenConversationUserId;
+    _pendingOpenConversationUserId = null;
+    return pending;
+  }
 
   Future<void> init() async {
     if (_initialized) return;
@@ -55,8 +75,21 @@ class PushNotificationService {
 
     FirebaseMessaging.onMessage.listen((message) async {
       debugPrint('[Push] Foreground message: ${message.messageId}');
+      if (await _isSelfSentForCurrentUser(message.data)) {
+        return;
+      }
+      _emitIncomingMessage(message.data);
       await _showForegroundNotification(message);
     });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _handleConversationOpenFromData(message.data);
+    });
+
+    final initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleConversationOpenFromData(initialMessage.data);
+    }
 
     messaging.onTokenRefresh.listen((token) async {
       try {
@@ -78,7 +111,10 @@ class PushNotificationService {
     );
 
     try {
-      await _localNotifications.initialize(initSettings);
+      await _localNotifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onLocalNotificationTap,
+      );
 
       await _localNotifications
           .resolvePlatformSpecificImplementation<
@@ -117,11 +153,16 @@ class PushNotificationService {
       iOS: DarwinNotificationDetails(),
     );
 
+    final senderId = _extractSenderId(message.data);
+    final payload =
+        senderId == null ? null : jsonEncode({'type': 'new_message', 'senderId': senderId});
+
     await _localNotifications.show(
       message.hashCode,
       n.title ?? 'New message',
       n.body ?? 'You received a new message',
       details,
+      payload: payload,
     );
 
     // Update app badge count
@@ -175,6 +216,58 @@ class PushNotificationService {
     } catch (e) {
       debugPrint('[Push] Failed to remove notification: $e');
     }
+  }
+
+  void _onLocalNotificationTap(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) {
+        _handleConversationOpenFromData(decoded);
+      }
+    } catch (e) {
+      debugPrint('[Push] Failed to decode local notification payload: $e');
+    }
+  }
+
+  Future<bool> _isSelfSentForCurrentUser(Map<String, dynamic> data) async {
+    final senderId = _extractSenderId(data);
+    if (senderId == null) return false;
+    final prefs = await SharedPreferences.getInstance();
+    final currentUserId = prefs.getString('user_id');
+    return currentUserId != null && currentUserId == senderId;
+  }
+
+  void _emitIncomingMessage(Map<String, dynamic> data) {
+    if (!_isNewMessagePayload(data)) return;
+    final senderId = _extractSenderId(data);
+    if (senderId == null) return;
+    _incomingMessageController.add(senderId);
+  }
+
+  void _handleConversationOpenFromData(Map<String, dynamic> data) {
+    if (!_isNewMessagePayload(data)) return;
+    final senderId = _extractSenderId(data);
+    if (senderId == null) return;
+
+    if (_openConversationController.hasListener) {
+      _openConversationController.add(senderId);
+    } else {
+      _pendingOpenConversationUserId = senderId;
+    }
+  }
+
+  bool _isNewMessagePayload(Map<String, dynamic> data) {
+    final type = data['type']?.toString();
+    return type == null || type == 'new_message';
+  }
+
+  String? _extractSenderId(Map<String, dynamic> data) {
+    final senderId = data['senderId']?.toString().trim();
+    if (senderId == null || senderId.isEmpty) return null;
+    return senderId;
   }
 
   String _platformName() {

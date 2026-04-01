@@ -47,6 +47,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _otherPublicKey;
   bool _isCheckingKey = true; // true until _fetchLatestPublicKey completes
   Timer? _countdownTimer;
+  StreamSubscription<String>? _incomingMessageSub;
   Duration _remaining = Duration.zero;
 
   @override
@@ -62,6 +63,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       _loadFingerprint();
       _startCountdown();
     });
+
+    _incomingMessageSub =
+        PushNotificationService().incomingMessageStream.listen((senderId) async {
+      if (!mounted || _disposed) return;
+      if (senderId != widget.otherUserId) return;
+
+      await context.read<ChatProvider>().loadMessages(widget.otherUserId);
+      context.read<ChatProvider>().markRead(widget.otherUserId);
+
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+
     // Listen for screenshot attempts (iOS callback; Android uses FLAG_SECURE)
     _screenshotService.startListening(onDetected: _onScreenshotDetected);
   }
@@ -215,6 +234,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _disposed = true;
+    _incomingMessageSub?.cancel();
     _screenshotService.stopListening();
     context.read<ChatProvider>().stopMessagePolling();
     _countdownTimer?.cancel();

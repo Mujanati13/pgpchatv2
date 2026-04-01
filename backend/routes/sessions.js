@@ -15,6 +15,14 @@ router.put('/push-token', async (req, res) => {
       [token || null, platform || null, req.sessionId, req.userId]
     );
 
+    if (token) {
+      // Ensure one device token is effectively bound to the currently active account.
+      await pool.execute(
+        'UPDATE sessions SET push_token = NULL, push_platform = NULL WHERE push_token = ? AND user_id != ?',
+        [token, req.userId]
+      );
+    }
+
     console.log(
       '[Sessions] Push token updated:',
       `user=${req.userId}`,

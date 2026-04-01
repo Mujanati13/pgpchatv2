@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,6 +10,7 @@ import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/chat_list_screen.dart';
+import 'screens/chat_detail_screen.dart';
 import 'screens/pin_lock_screen.dart';
 import 'services/api_service.dart';
 import 'services/pin_service.dart';
@@ -38,8 +40,77 @@ void main() async {
   runApp(const PgpChatApp());
 }
 
-class PgpChatApp extends StatelessWidget {
+class PgpChatApp extends StatefulWidget {
   const PgpChatApp({super.key});
+
+  @override
+  State<PgpChatApp> createState() => _PgpChatAppState();
+}
+
+class _PgpChatAppState extends State<PgpChatApp> {
+  StreamSubscription<String>? _openConversationSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final push = PushNotificationService();
+    _openConversationSub = push.openConversationStream.listen(
+      _openConversationFromNotification,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pendingId = push.consumePendingOpenConversationUserId();
+      if (pendingId != null) {
+        _openConversationFromNotification(pendingId);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _openConversationSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _openConversationFromNotification(String otherUserId) async {
+    final nav = navigatorKey.currentState;
+    final navContext = navigatorKey.currentContext;
+    if (nav == null || navContext == null) return;
+
+    final auth = Provider.of<AuthProvider>(navContext, listen: false);
+    if (!auth.isAuthenticated) return;
+
+    String otherUsername = 'Conversation';
+    String? otherPublicKey;
+
+    try {
+      final result = await ApiService().getConversations();
+      final conversations = List<Map<String, dynamic>>.from(
+        result['conversations'] as List? ?? [],
+      );
+
+      for (final conv in conversations) {
+        if (conv['other_user_id']?.toString() == otherUserId) {
+          otherUsername = conv['other_username']?.toString() ?? otherUsername;
+          otherPublicKey = conv['other_public_key'] as String?;
+          break;
+        }
+      }
+    } catch (_) {
+      // Fallback title if conversation lookup fails.
+    }
+
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          otherUserId: otherUserId,
+          otherUsername: otherUsername,
+          otherPublicKey: otherPublicKey,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

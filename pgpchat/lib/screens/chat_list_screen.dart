@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/responsive_center.dart';
 import '../widgets/app_nav_sidebar.dart';
 import 'navigation_drawer_screen.dart';
@@ -23,6 +26,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   String _searchQuery = '';
   bool _showSearch = false;
   final _searchController = TextEditingController();
+  StreamSubscription<String>? _incomingMessageSub;
 
   @override
   void initState() {
@@ -30,10 +34,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatProvider>().startConversationPolling();
     });
+
+    _incomingMessageSub =
+        PushNotificationService().incomingMessageStream.listen((_) {
+      if (!mounted) return;
+      context.read<ChatProvider>().loadConversations();
+    });
   }
 
   @override
   void dispose() {
+    _incomingMessageSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
