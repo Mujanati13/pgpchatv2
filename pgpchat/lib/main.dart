@@ -11,8 +11,10 @@ import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/chat_detail_screen.dart';
+import 'screens/keygen_step1_screen.dart';
 import 'screens/pin_lock_screen.dart';
 import 'services/api_service.dart';
+import 'services/pgp_service.dart';
 import 'services/pin_service.dart';
 import 'services/push_notification_service.dart';
 
@@ -80,6 +82,7 @@ class _PgpChatAppState extends State<PgpChatApp> {
 
     final auth = Provider.of<AuthProvider>(navContext, listen: false);
     if (!auth.isAuthenticated) return;
+    if (!await PgpService().hasKeyPair) return;
 
     String otherUsername = 'Conversation';
     String? otherPublicKey;
@@ -132,12 +135,68 @@ class _PgpChatAppState extends State<PgpChatApp> {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 context.read<SettingsProvider>().loadSettings();
               });
-              return PinLockScreen(child: const ChatListScreen());
+              return const PinLockScreen(child: _PgpKeyGate());
             }
             return const LoginScreen();
           },
         ),
       ),
+    );
+  }
+}
+
+class _PgpKeyGate extends StatefulWidget {
+  const _PgpKeyGate();
+
+  @override
+  State<_PgpKeyGate> createState() => _PgpKeyGateState();
+}
+
+class _PgpKeyGateState extends State<_PgpKeyGate> {
+  final PgpService _pgpService = PgpService();
+  late Future<bool> _hasKeyPairFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasKeyPairFuture = _pgpService.hasKeyPair;
+    _pgpService.addListener(_refreshKeyState);
+  }
+
+  @override
+  void dispose() {
+    _pgpService.removeListener(_refreshKeyState);
+    super.dispose();
+  }
+
+  void _refreshKeyState() {
+    if (!mounted) return;
+    setState(() {
+      _hasKeyPairFuture = _pgpService.hasKeyPair;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _hasKeyPairFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            backgroundColor: AppColors.backgroundDark,
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
+
+        final hasKeyPair = snapshot.data ?? false;
+        if (!hasKeyPair) {
+          return const KeygenStep1Screen();
+        }
+
+        return const ChatListScreen();
+      },
     );
   }
 }

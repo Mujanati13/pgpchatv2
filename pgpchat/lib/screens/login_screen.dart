@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
-import '../providers/settings_provider.dart';
 import '../widgets/responsive_center.dart';
-import 'chat_list_screen.dart';
-import 'keygen_step1_screen.dart';
 import 'recover_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -66,18 +63,9 @@ class _LoginScreenState extends State<LoginScreen> {
       success = await auth.register(username, password);
     }
 
-    if (success && mounted) {
-      if (_isLogin) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ChatListScreen()),
-        );
-      } else {
-        // New account — load settings then go to key generation
-        context.read<SettingsProvider>().loadSettings();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const KeygenStep1Screen()),
-        );
-      }
+    if (success) {
+      // Auth state listener in main.dart handles post-login routing.
+      return;
     } else if (auth.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.error!)),
