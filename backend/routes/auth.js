@@ -149,23 +149,47 @@ router.delete('/account', authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/auth/public-key  — update user's public key
-router.put('/public-key', authenticate, async (req, res) => {
+async function upsertPublicKey(req, res) {
   try {
-    const { publicKey } = req.body;
+    const rawKey = req.body?.publicKey;
+    const publicKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+
     if (!publicKey) {
       return res.status(400).json({ error: 'publicKey required' });
     }
-    await pool.execute('UPDATE users SET public_key = ? WHERE id = ?', [
+
+    if (!publicKey.includes('BEGIN PGP PUBLIC KEY')) {
+      return res.status(400).json({ error: 'Invalid public key format' });
+    }
+
+    const [result] = await pool.execute('UPDATE users SET public_key = ? WHERE id = ?', [
       publicKey,
       req.userId,
     ]);
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(
+      '[Auth] Public key updated:',
+      `user=${req.userId}`,
+      `session=${req.sessionId}`,
+      `bytes=${Buffer.byteLength(publicKey, 'utf8')}`
+    );
+
     res.json({ success: true });
   } catch (err) {
     console.error('[Auth] Public key update error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}
+
+// PUT /api/auth/public-key  — update user's public key
+router.put('/public-key', authenticate, upsertPublicKey);
+
+// POST /api/auth/public-key — fallback for environments that block PUT
+router.post('/public-key', authenticate, upsertPublicKey);
 
 // POST /api/auth/reset-pgp  — PGP reset protocol: wipe chats, contacts, keys
 router.post('/reset-pgp', authenticate, async (req, res) => {

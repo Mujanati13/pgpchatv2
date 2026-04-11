@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_center.dart';
 import '../services/pgp_service.dart';
@@ -18,66 +20,123 @@ import 'backup_recovery_screen.dart';
 class ManagePgpScreen extends StatelessWidget {
   const ManagePgpScreen({super.key});
 
+  Future<String?> _readKeyFileSafely(String filePath) async {
+    try {
+      final bytes = await File(filePath).readAsBytes();
+      if (bytes.isEmpty) return null;
+
+      final sample = bytes.length > 2048 ? bytes.sublist(0, 2048) : bytes;
+      final hasNullByte = sample.any((b) => b == 0);
+      if (hasNullByte) return null;
+
+      return utf8.decode(bytes, allowMalformed: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _importKey(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-    );
-    if (result == null || result.files.isEmpty) return;
-
-    final filePath = result.files.single.path;
-    if (filePath == null) return;
-
-    final content = await File(filePath).readAsString();
-    final pgp = PgpService();
-
-    if (content.contains('BEGIN PGP PRIVATE KEY')) {
-      // Also require the public key so we can upload it to the server
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Private key selected. Now pick your PUBLIC key file.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      final pubResult = await FilePicker.platform.pickFiles(
+    try {
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
       );
-      String publicKey = '';
-      if (pubResult != null && pubResult.files.single.path != null) {
-        final pubContent = await File(pubResult.files.single.path!).readAsString();
-        if (pubContent.contains('BEGIN PGP PUBLIC KEY')) {
-          publicKey = pubContent;
+      if (result == null || result.files.isEmpty) return;
+
+      final filePath = result.files.single.path;
+      if (filePath == null) return;
+
+      final content = await _readKeyFileSafely(filePath);
+      if (content == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please choose a valid text-based PGP key file.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final pgp = PgpService();
+
+      if (content.contains('BEGIN PGP PRIVATE KEY')) {
+        // Also require the public key so we can upload it to the server
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Private key selected. Now pick your PUBLIC key file.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        final pubResult = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: false,
+        );
+        String publicKey = '';
+        if (pubResult != null && pubResult.files.single.path != null) {
+          final pubContent = await _readKeyFileSafely(pubResult.files.single.path!);
+          if (pubContent != null && pubContent.contains('BEGIN PGP PUBLIC KEY')) {
+            publicKey = pubContent;
+          }
+        }
+        await pgp.importKeys(publicKey: publicKey, privateKey: content);
+        var syncedToServer = false;
+        if (publicKey.isNotEmpty) {
+          try {
+            await ApiService().updatePublicKey(publicKey);
+            syncedToServer = true;
+          } catch (_) {
+            syncedToServer = false;
+          }
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                publicKey.isEmpty
+                    ? 'Private key imported (public key not provided - tap "Sync public key to server" to fix)'
+                    : (syncedToServer
+                        ? 'Key pair imported and synced to server'
+                        : 'Key pair imported locally. Server sync failed - tap "Sync public key to server".'),
+              ),
+            ),
+          );
+        }
+      } else if (content.contains('BEGIN PGP PUBLIC KEY')) {
+        await pgp.importKeys(publicKey: content, privateKey: '');
+        var syncedToServer = false;
+        try {
+          await ApiService().updatePublicKey(content);
+          syncedToServer = true;
+        } catch (_) {
+          syncedToServer = false;
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                syncedToServer
+                    ? 'Public key imported and uploaded'
+                    : 'Public key imported locally. Upload failed - tap "Sync public key to server".',
+              ),
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid PGP key file')),
+          );
         }
       }
-      await pgp.importKeys(publicKey: publicKey, privateKey: content);
-      if (publicKey.isNotEmpty) {
-        await ApiService().updatePublicKey(publicKey);
-      }
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(publicKey.isNotEmpty
-                ? 'Key pair imported and synced to server'
-                : 'Private key imported (public key not provided — tap "Sync public key to server" to fix)'),
+          const SnackBar(
+            content: Text('Could not import key. Please try again with a valid key file.'),
           ),
-        );
-      }
-    } else if (content.contains('BEGIN PGP PUBLIC KEY')) {
-      await pgp.importKeys(publicKey: content, privateKey: '');
-      // Also upload to server
-      await ApiService().updatePublicKey(content);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Public key imported and uploaded')),
-        );
-      }
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid PGP key file')),
         );
       }
     }
@@ -114,20 +173,43 @@ class ManagePgpScreen extends StatelessWidget {
 
   Future<void> _downloadPublicKey(BuildContext context) async {
     final pgp = PgpService();
-    final hasKey = await pgp.hasKeyPair;
-    if (!hasKey) {
+    final publicKey = await pgp.publicKey;
+    if (publicKey == null || publicKey.trim().isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No key pair generated yet')),
+          const SnackBar(content: Text('No public key available')),
         );
       }
       return;
     }
-    final file = await pgp.exportPublicKey();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Public key saved to ${file.path}')),
+
+    try {
+      final bytes = Uint8List.fromList(utf8.encode(publicKey));
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save Public Key',
+        fileName: 'PGP.txt',
+        type: FileType.custom,
+        allowedExtensions: ['txt'],
+        bytes: bytes,
       );
+
+      if (savedPath == null) {
+        return;
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Public key downloaded to $savedPath')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not download public key. Please try again.'),
+          ),
+        );
+      }
     }
   }
 

@@ -166,7 +166,14 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updatePublicKey(String publicKey) async {
-    return put('/auth/public-key', body: {'publicKey': publicKey});
+    try {
+      return await put('/auth/public-key', body: {'publicKey': publicKey});
+    } on ApiException catch (e) {
+      if (e.statusCode == 404 || e.statusCode == 405 || e.statusCode == 501) {
+        return post('/auth/public-key', body: {'publicKey': publicKey});
+      }
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> resetPgp() async {

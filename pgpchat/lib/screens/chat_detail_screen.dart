@@ -34,6 +34,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _disposed = false;
   bool _isUploadingImage = false;
+  bool _isSendingMessage = false;
   bool _isClearingChat = false;
   bool _isBlocked = false;
   bool _isTogglingBlock = false;
@@ -64,22 +65,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       _startCountdown();
     });
 
-    _incomingMessageSub =
-        PushNotificationService().incomingMessageStream.listen((senderId) async {
-      if (!mounted || _disposed) return;
-      if (senderId != widget.otherUserId) return;
+    _incomingMessageSub = PushNotificationService().incomingMessageStream
+        .listen((senderId) async {
+          if (!mounted || _disposed) return;
+          if (senderId != widget.otherUserId) return;
 
-      await context.read<ChatProvider>().loadMessages(widget.otherUserId);
-      context.read<ChatProvider>().markRead(widget.otherUserId);
+          await context.read<ChatProvider>().loadMessages(widget.otherUserId);
+          context.read<ChatProvider>().markRead(widget.otherUserId);
 
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        });
 
     // Listen for screenshot attempts (iOS callback; Android uses FLAG_SECURE)
     _screenshotService.startListening(onDetected: _onScreenshotDetected);
@@ -255,27 +256,28 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isSendingMessage || _isBlocked) return;
+
+    setState(() => _isSendingMessage = true);
     final messenger = ScaffoldMessenger.of(context);
-
-    await _refreshRecipientPublicKeyBeforeSend();
-    if (!mounted || _disposed) return;
-
-    if (_isCheckingKey) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Checking recipient PGP key...')),
-      );
-      return;
-    }
-
-    if (_otherPublicKey == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Recipient has no public key')),
-      );
-      return;
-    }
-
     try {
+      await _refreshRecipientPublicKeyBeforeSend();
+      if (!mounted || _disposed) return;
+
+      if (_isCheckingKey) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Checking recipient PGP key...')),
+        );
+        return;
+      }
+
+      if (_otherPublicKey == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Recipient has no public key')),
+        );
+        return;
+      }
+
       final encrypted = await _pgp.encrypt(text, _otherPublicKey!);
       String? signature;
       if (_passphrase != null) {
@@ -311,6 +313,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingMessage = false);
+      }
     }
   }
 
@@ -1127,12 +1133,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               color: AppColors.primary,
                               shape: BoxShape.circle,
                             ),
-                            child: IconButton(
-                              icon: const Icon(Icons.send, size: 20),
-                              color: Colors.white,
-                              padding: EdgeInsets.zero,
-                              onPressed: _isBlocked ? null : _sendMessage,
-                            ),
+                            child: _isSendingMessage
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.send, size: 20),
+                                    color: Colors.white,
+                                    padding: EdgeInsets.zero,
+                                    onPressed: _isBlocked ? null : _sendMessage,
+                                  ),
                           ),
                         ],
                       ),
@@ -1290,7 +1308,8 @@ class _MessageBubbleState extends State<_MessageBubble> {
     final text = raw.trim();
     final lower = text.toLowerCase();
 
-    if (lower.contains('no private key') || lower.contains('private key is missing')) {
+    if (lower.contains('no private key') ||
+        lower.contains('private key is missing')) {
       return 'Cannot decrypt here: private key missing. Import your private key in Manage PGP, then tap to retry.';
     }
 
