@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_center.dart';
 import '../services/pgp_service.dart';
 import '../services/api_service.dart';
+import '../services/download_service.dart';
 import 'chat_list_screen.dart';
 
 class KeygenSuccessScreen extends StatelessWidget {
@@ -18,6 +20,101 @@ class KeygenSuccessScreen extends StatelessWidget {
 
   static const Color _successGreen = AppColors.successPrimary;
   static const Color _successBgDark = AppColors.successBackgroundDark;
+
+  Future<void> _downloadPublicKey(BuildContext context) async {
+    final publicKey = await PgpService().publicKey;
+    if (publicKey == null || publicKey.trim().isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No public key available')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final fileName = 'PGP-${DateTime.now().millisecondsSinceEpoch}.txt';
+      final savedPath = await DownloadService.downloadTextFile(
+        fileName: fileName,
+        content: publicKey,
+      );
+
+      if (savedPath == null || !context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Platform.isAndroid
+                ? 'Public key downloaded successfully'
+                : 'Public key downloaded to $savedPath',
+          ),
+          action: Platform.isAndroid
+              ? SnackBarAction(
+                  label: 'Open',
+                  onPressed: () async {
+                    await DownloadService.openDownloads();
+                  },
+                )
+              : null,
+        ),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not download public key. Please try again.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadPrivateKey(BuildContext context) async {
+    final privateKey = await PgpService().privateKey;
+    if (privateKey == null || privateKey.trim().isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No private key available')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final fileName =
+          'PGP-private-${DateTime.now().millisecondsSinceEpoch}.txt';
+      final savedPath = await DownloadService.downloadTextFile(
+        fileName: fileName,
+        content: privateKey,
+      );
+
+      if (savedPath == null || !context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Platform.isAndroid
+                ? 'Private key downloaded successfully'
+                : 'Private key downloaded to $savedPath',
+          ),
+          action: Platform.isAndroid
+              ? SnackBarAction(
+                  label: 'Open',
+                  onPressed: () async {
+                    await DownloadService.openDownloads();
+                  },
+                )
+              : null,
+        ),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not download private key. Please try again.'),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -245,24 +342,7 @@ class KeygenSuccessScreen extends StatelessWidget {
                     _ActionButton(
                       icon: Icons.vpn_key,
                       label: 'Backup Private Key',
-                      onTap: () async {
-                        try {
-                          final file = await PgpService().exportPrivateKey();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Saved to ${file.path}')),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Could not export private key. Please try again.'),
-                              ),
-                            );
-                          }
-                        }
-                      },
+                      onTap: () => _downloadPrivateKey(context),
                       bgColor: Colors.white.withValues(alpha: 0.1),
                       textColor: AppColors.textMainDark,
                     ),
@@ -270,24 +350,7 @@ class KeygenSuccessScreen extends StatelessWidget {
                     _ActionButton(
                       icon: Icons.share,
                       label: 'Share Public Key',
-                      onTap: () async {
-                        try {
-                          final file = await PgpService().exportPublicKey();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Saved to ${file.path}')),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Could not export public key. Please try again.'),
-                              ),
-                            );
-                          }
-                        }
-                      },
+                      onTap: () => _downloadPublicKey(context),
                       bgColor: Colors.white.withValues(alpha: 0.1),
                       textColor: AppColors.textMainDark,
                     ),

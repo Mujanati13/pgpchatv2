@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/responsive_center.dart';
+import 'authenticated_home_screen.dart';
 import 'recover_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -64,7 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (success) {
-      // Auth state listener in main.dart handles post-login routing.
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthenticatedHomeScreen()),
+        (_) => false,
+      );
       return;
     } else if (auth.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

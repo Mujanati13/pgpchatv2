@@ -53,11 +53,25 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _username = prefs.getString('username');
       _userId = prefs.getString('user_id');
+      await _adoptLegacyPgpKeysIfNeeded();
       try {
         await _push.syncTokenWithServer();
       } catch (_) {}
     }
     notifyListeners();
+  }
+
+  Future<void> _adoptLegacyPgpKeysIfNeeded() async {
+    try {
+      final id = _userId;
+      if (id == null || id.isEmpty) return;
+      final currentServerPublicKey = await _api.getUserPublicKey(id);
+      await _pgp.maybeAdoptLegacyKeysForCurrentAccount(
+        expectedPublicKey: currentServerPublicKey,
+      );
+    } catch (_) {
+      // Best-effort migration. If this fails, user can still generate/import keys.
+    }
   }
 
   Future<bool> register(String username, String password) async {
@@ -76,6 +90,14 @@ class AuthProvider extends ChangeNotifier {
       try {
         await _push.syncTokenWithServer();
       } catch (_) {}
+
+      if (!_isAuthenticated) {
+        _error = 'Session expired. Please sign in again.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -105,9 +127,18 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('username', username);
       if (_userId != null) await prefs.setString('user_id', _userId!);
+      await _adoptLegacyPgpKeysIfNeeded();
       try {
         await _push.syncTokenWithServer();
       } catch (_) {}
+
+      if (!_isAuthenticated) {
+        _error = 'Session expired. Please sign in again.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       _isLoading = false;
       notifyListeners();
       return true;

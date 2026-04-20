@@ -124,13 +124,14 @@ class _RecoverScreenState extends State<RecoverScreen> {
 
   // Step 2a: Decrypt challenge with PGP private key
   Future<void> _decryptChallenge() async {
+    final username = _usernameController.text.trim();
     final passphrase = _passphraseController.text;
     if (passphrase.isEmpty) {
       setState(() => _error = 'Please enter your PGP passphrase');
       return;
     }
 
-    final hasKey = await _pgp.hasKeyPair;
+    final hasKey = await _pgp.hasKeyPairForAccount(username: username);
     if (!hasKey) {
       setState(() => _error = 'No PGP private key found on this device');
       return;
@@ -138,7 +139,11 @@ class _RecoverScreenState extends State<RecoverScreen> {
 
     setState(() { _loading = true; _error = null; });
     try {
-      final decrypted = (await _pgp.decrypt(_encryptedChallenge!, passphrase)).trim();
+      final decrypted = (await _pgp.decryptForAccount(
+        _encryptedChallenge!,
+        passphrase,
+        username: username,
+      )).trim();
       if (decrypted.isEmpty) {
         throw Exception('Decryption returned empty token');
       }

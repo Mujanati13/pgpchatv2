@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_center.dart';
 import '../services/pgp_service.dart';
 import '../services/api_service.dart';
+import '../services/download_service.dart';
 import '../providers/auth_provider.dart';
 import 'keygen_step1_screen.dart';
 import 'pgp_encrypt_screen.dart';
@@ -184,13 +184,10 @@ class ManagePgpScreen extends StatelessWidget {
     }
 
     try {
-      final bytes = Uint8List.fromList(utf8.encode(publicKey));
-      final savedPath = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Public Key',
-        fileName: 'PGP.txt',
-        type: FileType.custom,
-        allowedExtensions: ['txt'],
-        bytes: bytes,
+      final fileName = 'PGP-${DateTime.now().millisecondsSinceEpoch}.txt';
+      final savedPath = await DownloadService.downloadTextFile(
+        fileName: fileName,
+        content: publicKey,
       );
 
       if (savedPath == null) {
@@ -199,7 +196,21 @@ class ManagePgpScreen extends StatelessWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Public key downloaded to $savedPath')),
+          SnackBar(
+            content: Text(
+              Platform.isAndroid
+                  ? 'Public key downloaded successfully'
+                  : 'Public key downloaded to $savedPath',
+            ),
+            action: Platform.isAndroid
+                ? SnackBarAction(
+                    label: 'Open',
+                    onPressed: () async {
+                      await DownloadService.openDownloads();
+                    },
+                  )
+                : null,
+          ),
         );
       }
     } catch (_) {
