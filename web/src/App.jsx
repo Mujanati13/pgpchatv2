@@ -48,6 +48,7 @@ function App() {
             <a href="#workflow">Workflow</a>
             <a href="#download">Download</a>
             <a href="#donate">Donate</a>
+            <a href="#contact">Contact</a>
           </nav>
         </header>
 
@@ -125,6 +126,10 @@ function App() {
           <a className="quick-nav-link" href="#donate">
             <span className="quick-nav-index">05</span>
             <span className="quick-nav-label">Donate</span>
+          </a>
+          <a className="quick-nav-link" href="#contact">
+            <span className="quick-nav-index">06</span>
+            <span className="quick-nav-label">Contact</span>
           </a>
         </section>
 
@@ -289,6 +294,35 @@ function App() {
           </div>
 
           <p className="wallet-note">Update these placeholder wallet addresses with your real donation wallets.</p>
+        </section>
+
+        <section className="contact-section reveal-up" id="contact" aria-label="Contact options">
+          <div className="contact-head">
+            <p className="section-index">06</p>
+            <p className="eyebrow">Get In Touch</p>
+            <h2>Contact The PGP Messenger Team</h2>
+            <p>Questions, support requests, partnerships, or security reports are welcome.</p>
+          </div>
+
+          <div className="contact-grid">
+            <article className="contact-card" aria-label="General support contact">
+              <h3>General Support</h3>
+              <p>For setup help, account issues, or onboarding assistance.</p>
+              <a className="contact-link" href="mailto:support@pgpchat.app">support@pgpchat.app</a>
+            </article>
+
+            <article className="contact-card" aria-label="Security report contact">
+              <h3>Security Reports</h3>
+              <p>Report vulnerabilities or suspicious activity directly to security.</p>
+              <a className="contact-link" href="mailto:security@pgpchat.app">security@pgpchat.app</a>
+            </article>
+
+            <article className="contact-card" aria-label="Business contact">
+              <h3>Business & Partnerships</h3>
+              <p>For enterprise deployments, integrations, and strategic partnerships.</p>
+              <a className="contact-link" href="mailto:hello@pgpchat.app">hello@pgpchat.app</a>
+            </article>
+          </div>
         </section>
 
         <footer className="landing-foot" aria-label="Footer details">
