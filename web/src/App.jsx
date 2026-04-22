@@ -221,10 +221,11 @@ function App() {
           <div className="download-copy">
             <p className="section-index">04</p>
             <p className="eyebrow">Get The Mobile App</p>
-            <h2>Choose your platform and start secure messaging.</h2>
+            <h2>First 11,111 downloads are free.</h2>
             <p>
               Install on Android or iOS and keep the same secure workflow across your devices.
             </p>
+            <p className="pricing-note">After the free limit, Google Play price is USD 0.99 one-time for a lifetime account.</p>
           </div>
 
           <div className="download-grid">
@@ -235,6 +236,8 @@ function App() {
               <div className="store-text">
                 <p>Android</p>
                 <h3>Google Play</h3>
+                <span className="store-offer">First 11,111 downloads: Free</span>
+                <span className="store-price">Then USD 0.99 one-time (lifetime account)</span>
               </div>
               <a
                 className="store-btn"

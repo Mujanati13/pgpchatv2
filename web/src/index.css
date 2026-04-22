@@ -682,6 +682,13 @@ a {
   max-width: 64ch;
 }
 
+.pricing-note {
+  margin-top: 8px !important;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink) !important;
+}
+
 .download-grid {
   margin-top: 14px;
   display: grid;
@@ -733,6 +740,24 @@ a {
 .store-text h3 {
   margin: 2px 0 0;
   font-size: 1.02rem;
+}
+
+.store-offer,
+.store-price {
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.store-offer {
+  margin-top: 5px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.store-price {
+  margin-top: 2px;
+  color: var(--ink-soft);
 }
 
 .store-btn {
