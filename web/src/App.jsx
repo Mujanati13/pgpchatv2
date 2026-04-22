@@ -1,4 +1,36 @@
+import { useState } from 'react';
+
 function App() {
+  const [copiedCoin, setCopiedCoin] = useState('');
+
+  const donationWallets = [
+    {
+      coin: 'BTC',
+      network: 'Bitcoin',
+      address: 'YOUR_BTC_WALLET_ADDRESS',
+    },
+    {
+      coin: 'ETH',
+      network: 'Ethereum',
+      address: 'YOUR_ETH_WALLET_ADDRESS',
+    },
+    {
+      coin: 'XMR',
+      network: 'Monero',
+      address: 'YOUR_XMR_WALLET_ADDRESS',
+    },
+  ];
+
+  const handleCopy = async (coin, address) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedCoin(coin);
+      window.setTimeout(() => setCopiedCoin(''), 1400);
+    } catch {
+      setCopiedCoin('');
+    }
+  };
+
   return (
     <main className="page-shell" aria-label="PGP Messenger landing page">
       <div className="ambient-grid" aria-hidden="true" />
@@ -11,47 +43,54 @@ function App() {
             <span>PGP Messenger</span>
           </div>
           <nav className="top-links" aria-label="Primary links">
+            <a href="#security">Security</a>
             <a href="#features">Features</a>
             <a href="#workflow">Workflow</a>
-            <a href="#security">Security</a>
             <a href="#download">Download</a>
+            <a href="#donate">Donate</a>
           </nav>
         </header>
 
         <section className="hero-grid">
           <div className="hero-copy reveal-up delay-1">
-            <p className="eyebrow">Private by default. Trusted by design.</p>
-            <h1>Encrypted messaging for teams that protect every word.</h1>
+            <p className="eyebrow">Secure Team Communication</p>
+            <h1>PGP Messenger keeps private conversations private.</h1>
             <p className="subline">
-              PGP Messenger gives your organization a calm, modern workspace for confidential conversations.
-              Keys stay on device, messages stay encrypted, and trust stays in your hands.
+              Give your team a focused messaging space where encryption is built-in from the first message.
+              Keys stay on-device, sessions are controlled, and sensitive discussions stay protected.
             </p>
 
             <div className="hero-actions">
               <a className="solid-btn" href="#download">
-                Start Secure Chat
+                Download Mobile App
               </a>
-              <a className="ghost-btn" href="#workflow">
-                Watch Product Tour
+              <a className="ghost-btn" href="#security">
+                Review Security Model
               </a>
             </div>
 
             <div className="trust-strip" aria-label="Product highlights">
-              <span>Client-side key generation</span>
-              <span>Session-bound JWT auth</span>
-              <span>Multi-device management</span>
+              <span>On-device key generation</span>
+              <span>Session-bound authentication</span>
+              <span>Per-device session control</span>
             </div>
+
+            <ul className="hero-checklist" aria-label="Core value points">
+              <li>No private keys sent to the backend</li>
+              <li>Identity verification before trust</li>
+              <li>Configurable message retention and auto-delete</li>
+            </ul>
           </div>
 
           <article className="showcase-card reveal-up delay-2" aria-label="Encrypted chat preview">
             <div className="showcase-head">
-              <span>Live Secure Thread</span>
-              <span>End-to-End Locked</span>
+              <span>Live Encrypted Thread</span>
+              <span>Recipient-Only Read Access</span>
             </div>
             <div className="chat-preview">
-              <p className="bubble incoming">Deploy package signed and fingerprint verified.</p>
-              <p className="bubble outgoing">Received. Forwarding encrypted summary to ops channel.</p>
-              <p className="bubble incoming">Auto-delete policy set to 7 days for incident room.</p>
+              <p className="bubble incoming">Deployment package verified. Signature and fingerprint match.</p>
+              <p className="bubble outgoing">Acknowledged. Sharing encrypted incident summary with on-call.</p>
+              <p className="bubble incoming">Retention updated: auto-delete enabled after 7 days.</p>
             </div>
             <div className="showcase-foot" aria-label="Encryption indicators">
               <div>
@@ -66,44 +105,83 @@ function App() {
           </article>
         </section>
 
-        <section className="metrics reveal-up delay-2" id="security" aria-label="Trust metrics">
-          <article>
-            <h2>0 private keys</h2>
-            <p>ever uploaded to backend servers.</p>
-          </article>
-          <article>
-            <h2>10 MB</h2>
-            <p>encrypted payload support for rich media and docs.</p>
-          </article>
-          <article>
-            <h2>Real-time</h2>
-            <p>session validation with immediate revocation support.</p>
-          </article>
+        <section className="quick-nav reveal-up delay-2" aria-label="Jump to key sections">
+          <a className="quick-nav-link" href="#security">
+            <span className="quick-nav-index">01</span>
+            <span className="quick-nav-label">Security</span>
+          </a>
+          <a className="quick-nav-link" href="#features">
+            <span className="quick-nav-index">02</span>
+            <span className="quick-nav-label">Features</span>
+          </a>
+          <a className="quick-nav-link" href="#workflow">
+            <span className="quick-nav-index">03</span>
+            <span className="quick-nav-label">Workflow</span>
+          </a>
+          <a className="quick-nav-link" href="#download">
+            <span className="quick-nav-index">04</span>
+            <span className="quick-nav-label">Download</span>
+          </a>
+          <a className="quick-nav-link" href="#donate">
+            <span className="quick-nav-index">05</span>
+            <span className="quick-nav-label">Donate</span>
+          </a>
         </section>
 
-        <section className="feature-grid" id="features" aria-label="Feature highlights">
-          <article className="feature-card reveal-up delay-1">
-            <h3>Message With Confidence</h3>
-            <p>
-              Compose, encrypt, and send sensitive communication without exposing plain text to transport layers.
-            </p>
-          </article>
-          <article className="feature-card reveal-up delay-2">
-            <h3>Control Every Session</h3>
-            <p>
-              Track active devices, revoke compromised sessions instantly, and keep account security auditable.
-            </p>
-          </article>
-          <article className="feature-card reveal-up delay-3">
-            <h3>Respect Data Lifecycles</h3>
-            <p>
-              Configure auto-delete windows and data retention behavior for safer collaboration in high-risk contexts.
-            </p>
-          </article>
+        <section className="metrics-wrap reveal-up delay-2" id="security" aria-label="Security overview">
+          <div className="section-head">
+            <p className="section-index">01</p>
+            <p className="eyebrow">Security Overview</p>
+            <h2>Clear controls for high-trust communication</h2>
+            <p>Understand exactly where keys are stored, how sessions are validated, and how long data lives.</p>
+          </div>
+
+          <div className="metrics">
+            <article>
+              <p className="metric-tag">Private key handling</p>
+              <h3>Device-only storage</h3>
+              <p>Private keys are generated and kept locally on each user device.</p>
+            </article>
+            <article>
+              <p className="metric-tag">Encrypted payloads</p>
+              <h3>Up to 10 MB</h3>
+              <p>Share documents and media while preserving encrypted transport.</p>
+            </article>
+            <article>
+              <p className="metric-tag">Session governance</p>
+              <h3>Immediate revocation</h3>
+              <p>Invalidate active sessions instantly when a device is lost or compromised.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="feature-section" id="features" aria-label="Feature highlights">
+          <div className="section-head reveal-up delay-1">
+            <p className="section-index">02</p>
+            <p className="eyebrow">Feature Highlights</p>
+            <h2>Everything needed for secure team messaging</h2>
+            <p>Designed to keep sensitive communication practical, auditable, and easy to manage.</p>
+          </div>
+
+          <div className="feature-grid">
+            <article className="feature-card reveal-up delay-1">
+              <h3>Encrypt Before Sending</h3>
+              <p>Compose and encrypt messages on the client so plaintext is never exposed in transit.</p>
+            </article>
+            <article className="feature-card reveal-up delay-2">
+              <h3>Manage Active Devices</h3>
+              <p>View and revoke sessions from one place to reduce risk from stale or unknown logins.</p>
+            </article>
+            <article className="feature-card reveal-up delay-3">
+              <h3>Set Message Lifetimes</h3>
+              <p>Apply auto-delete windows that match your compliance and operational policies.</p>
+            </article>
+          </div>
         </section>
 
         <section className="workflow reveal-up" id="workflow" aria-label="How it works">
-          <div className="workflow-head">
+          <div className="workflow-head section-head">
+            <p className="section-index">03</p>
             <p className="eyebrow">Simple Secure Flow</p>
             <h2>How PGP Messenger Works</h2>
             <p>
@@ -136,17 +214,18 @@ function App() {
 
         <section className="download-section reveal-up delay-3" id="download" aria-label="Download the app">
           <div className="download-copy">
+            <p className="section-index">04</p>
             <p className="eyebrow">Get The Mobile App</p>
-            <h2>Download PGP Messenger on your preferred device.</h2>
+            <h2>Choose your platform and start secure messaging.</h2>
             <p>
-              Install on Android from Google Play or on iPhone from the App Store and start secure conversations anywhere.
+              Install on Android or iOS and keep the same secure workflow across your devices.
             </p>
           </div>
 
           <div className="download-grid">
             <article className="store-card" aria-label="Google Play download">
               <div className="store-icon" aria-hidden="true">
-                GP
+                <img src="/images/ic_launcher_foreground.png" alt="" className="store-icon-logo" />
               </div>
               <div className="store-text">
                 <p>Android</p>
@@ -164,7 +243,7 @@ function App() {
 
             <article className="store-card" aria-label="Apple App Store download">
               <div className="store-icon" aria-hidden="true">
-                iOS
+                <img src="/images/ic_launcher_foreground.png" alt="" className="store-icon-logo" />
               </div>
               <div className="store-text">
                 <p>iOS</p>
@@ -180,6 +259,36 @@ function App() {
               </a>
             </article>
           </div>
+        </section>
+
+        <section className="donate-section reveal-up" id="donate" aria-label="Donate with cryptocurrency">
+          <div className="donate-head">
+            <p className="section-index">05</p>
+            <p className="eyebrow">Support The Project</p>
+            <h2>Donate with BTC, ETH, or XMR</h2>
+            <p>If PGP Messenger helps you, you can support development with crypto donations.</p>
+          </div>
+
+          <div className="wallet-grid">
+            {donationWallets.map((wallet) => (
+              <article className="wallet-card" key={wallet.coin} aria-label={`${wallet.coin} donation wallet`}>
+                <div className="wallet-top">
+                  <span className="wallet-symbol">{wallet.coin}</span>
+                  <p>{wallet.network}</p>
+                </div>
+                <code className="wallet-address">{wallet.address}</code>
+                <button
+                  type="button"
+                  className={`wallet-copy ${copiedCoin === wallet.coin ? 'copied' : ''}`}
+                  onClick={() => handleCopy(wallet.coin, wallet.address)}
+                >
+                  {copiedCoin === wallet.coin ? 'Copied' : `Copy ${wallet.coin} Address`}
+                </button>
+              </article>
+            ))}
+          </div>
+
+          <p className="wallet-note">Update these placeholder wallet addresses with your real donation wallets.</p>
         </section>
 
         <footer className="landing-foot" aria-label="Footer details">
