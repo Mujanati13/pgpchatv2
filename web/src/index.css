@@ -832,14 +832,28 @@ a {
   font-size: 0.82rem;
 }
 
-.wallet-symbol {
-  border: 1px solid rgba(22, 55, 55, 0.18);
-  border-radius: 999px;
-  padding: 4px 10px;
+.wallet-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+}
+
+.wallet-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.wallet-coin-code {
   font-weight: 700;
   font-size: 0.8rem;
   letter-spacing: 0.05em;
-  background: linear-gradient(120deg, rgba(21, 124, 125, 0.13), rgba(240, 162, 68, 0.18));
 }
 
 .wallet-address {

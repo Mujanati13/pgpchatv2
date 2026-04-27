@@ -1,5 +1,35 @@
 import { useState } from 'react';
 
+const coinIconMap = {
+  BTC: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="30" fill="#F7931A" />
+      <path
+        d="M37.5 28.2c1.3-.9 2.1-2.2 2.1-4 0-3.9-3.2-5.8-7.6-6.2v-3.4h-3v3.2h-2v-3.2h-3v3.2h-4.1v3h2.3c.7 0 1.1.4 1.2.9v17.4c-.1.5-.5.9-1.2.9h-2.3v3h4.1v3.2h3V43h2v3.2h3v-3.3c5.1-.3 8.6-2.2 8.6-6.7 0-2.8-1.5-4.8-4.1-5.8ZM27 20.7h4.4c2.3 0 4.6.7 4.6 3.2s-2 3.4-4.9 3.4H27v-6.6Zm4.8 18.8H27v-7.2h4.7c3 0 5.4.8 5.4 3.6 0 2.6-2.2 3.6-5.3 3.6Z"
+        fill="#fff"
+      />
+    </svg>
+  ),
+  ETH: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="30" fill="#627EEA" />
+      <path d="M32.2 10 32 10.8v16.1l.2.2 7.5-4.4L32.2 10Z" fill="#fff" fillOpacity="0.9" />
+      <path d="m32.2 10-7.5 12.7 7.3 4.4V10Z" fill="#fff" fillOpacity="0.7" />
+      <path d="M32.2 36.2 32 36.5v11.5l.2.6 7.5-10.5-7.5-1.9Z" fill="#fff" fillOpacity="0.9" />
+      <path d="m32.2 48.6-.2-.6V36.5l-7.3 1.9 7.5 10.2Z" fill="#fff" fillOpacity="0.7" />
+      <path d="m32 34.8 7.5-4.3-7.5-3.5v7.8Z" fill="#fff" fillOpacity="0.8" />
+      <path d="M24.7 30.5 32 34.8V27l-7.3 3.5Z" fill="#fff" fillOpacity="0.6" />
+    </svg>
+  ),
+  XMR: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="30" fill="#FF6600" />
+      <path d="M10 32a22 22 0 0 1 44 0v14H42V32l-10 10-10-10v14H10V32Z" fill="#fff" />
+      <path d="M10 46h44a22 22 0 0 1-44 0Z" fill="#4B4B4B" />
+    </svg>
+  ),
+};
+
 function App() {
   const [copiedCoin, setCopiedCoin] = useState('');
 
@@ -7,17 +37,17 @@ function App() {
     {
       coin: 'BTC',
       network: 'Bitcoin',
-      address: 'YOUR_BTC_WALLET_ADDRESS',
+      address: '152v4jx4GZK4nB12nMa5zYqtReTPSygToN',
     },
     {
       coin: 'ETH',
       network: 'Ethereum',
-      address: 'YOUR_ETH_WALLET_ADDRESS',
+      address: '0x5549E5b98c140E63942c57f004f216a0f37f348f',
     },
     {
       coin: 'XMR',
       network: 'Monero',
-      address: 'YOUR_XMR_WALLET_ADDRESS',
+      address: '49aSAb7T4Kq7AFL4g1sPFUTE2p8w2wJiUek3LBigtfKJA6zJGBt8yJ1UrZGbygDGjq83muWZBb9F4amAimivPMDZLoHFW12',
     },
   ];
 
@@ -281,7 +311,10 @@ function App() {
             {donationWallets.map((wallet) => (
               <article className="wallet-card" key={wallet.coin} aria-label={`${wallet.coin} donation wallet`}>
                 <div className="wallet-top">
-                  <span className="wallet-symbol">{wallet.coin}</span>
+                  <span className="wallet-brand">
+                    <span className="wallet-icon">{coinIconMap[wallet.coin]}</span>
+                    <span className="wallet-coin-code">{wallet.coin}</span>
+                  </span>
                   <p>{wallet.network}</p>
                 </div>
                 <code className="wallet-address">{wallet.address}</code>
