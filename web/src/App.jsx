@@ -328,8 +328,6 @@ function App() {
               </article>
             ))}
           </div>
-
-          <p className="wallet-note">Update these placeholder wallet addresses with your real donation wallets.</p>
         </section>
 
         <section className="contact-section reveal-up" id="contact" aria-label="Contact options">
