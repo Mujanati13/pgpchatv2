@@ -69,7 +69,7 @@ function App() {
       <section className="landing-shell">
         <header className="topbar reveal-up" aria-label="Main navigation">
           <div className="brand-pill">
-            <img src="/images/ic_launcher_foreground.png" alt="PGP Messenger logo" className="brand-logo" />
+            <img src="/images/ic_launcher_foreground.png" alt="PGP Messenger logo" className="brand-logo" loading="eager" decoding="async" />
             <span>PGP Messenger</span>
           </div>
           <nav className="top-links" aria-label="Primary links">
@@ -261,7 +261,7 @@ function App() {
           <div className="download-grid">
             <article className="store-card" aria-label="Google Play download">
               <div className="store-icon" aria-hidden="true">
-                <img src="/images/ic_launcher_foreground.png" alt="" className="store-icon-logo" />
+                <img src="/images/ic_launcher_foreground.png" alt="" className="store-icon-logo" loading="lazy" decoding="async" />
               </div>
               <div className="store-text">
                 <p>Android</p>
@@ -273,7 +273,7 @@ function App() {
                 className="store-btn"
                 href="https://play.google.com/store/apps/details?id=com.yourdomain.pgpchat"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 Download on Google Play
               </a>
@@ -281,7 +281,7 @@ function App() {
 
             <article className="store-card" aria-label="Apple App Store download">
               <div className="store-icon" aria-hidden="true">
-                <img src="/images/ic_launcher_foreground.png" alt="" className="store-icon-logo" />
+                <img src="/images/ic_launcher_foreground.png" alt="" className="store-icon-logo" loading="lazy" decoding="async" />
               </div>
               <div className="store-text">
                 <p>iOS</p>
@@ -291,7 +291,7 @@ function App() {
                 className="store-btn"
                 href="https://apps.apple.com/us/app/pgp-messenger/id6761775280"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 Download on App Store
               </a>
