@@ -29,11 +29,11 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Screenshots are enabled
-        // window.setFlags(
-        //     WindowManager.LayoutParams.FLAG_SECURE,
-        //     WindowManager.LayoutParams.FLAG_SECURE
-        // )
+        // Prevent screenshots and screen recording
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
 
         ensureDownloadNotificationChannel()
     }
@@ -44,7 +44,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SCREENSHOT_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "getScreenshotBlocked" -> result.success(false)
+                    "getScreenshotBlocked" -> result.success(true)
                     else -> result.notImplemented()
                 }
             }
