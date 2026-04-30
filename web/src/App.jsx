@@ -126,10 +126,6 @@ function App() {
                 Your browser does not support the video tag.
               </video>
             </div>
-            <div className="showcase-caption">
-              <p>PGP Chat_ Secure, End-to-End Encrypted Messaging_720p</p>
-              <span>Use the controls to play, pause, or scrub through the presentation.</span>
-            </div>
             <div className="showcase-foot" aria-label="Encryption indicators">
               <div>
                 <span className="label">Cipher</span>
