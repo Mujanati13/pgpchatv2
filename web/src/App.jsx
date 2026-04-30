@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+const presentationVideo = new URL('../PGP Chat_ Secure, End-to-End Encrypted Messaging_720p.mp4', import.meta.url).href;
+
 const coinIconMap = {
   BTC: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -113,15 +115,20 @@ function App() {
             </ul>
           </div>
 
-          <article className="showcase-card reveal-up delay-2" aria-label="Encrypted chat preview">
+          <article className="showcase-card reveal-up delay-2" aria-label="Presentation video preview">
             <div className="showcase-head">
-              <span>Live Encrypted Thread</span>
-              <span>Recipient-Only Read Access</span>
+              <span>Presentation Video</span>
+              <span>PGP Chat Overview</span>
             </div>
-            <div className="chat-preview">
-              <p className="bubble incoming">Deployment package verified. Signature and fingerprint match.</p>
-              <p className="bubble outgoing">Acknowledged. Sharing encrypted incident summary with on-call.</p>
-              <p className="bubble incoming">Retention updated: auto-delete enabled after 7 days.</p>
+            <div className="video-frame">
+              <video className="presentation-video" controls preload="metadata" playsInline>
+                <source src={presentationVideo} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <div className="showcase-caption">
+              <p>PGP Chat_ Secure, End-to-End Encrypted Messaging_720p</p>
+              <span>Use the controls to play, pause, or scrub through the presentation.</span>
             </div>
             <div className="showcase-foot" aria-label="Encryption indicators">
               <div>
