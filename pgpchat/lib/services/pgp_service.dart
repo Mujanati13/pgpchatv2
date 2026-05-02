@@ -160,6 +160,14 @@ class PgpService extends ChangeNotifier {
     return _hasAnyScopedKeyPair(prefs, scopeKeys);
   }
 
+  Future<bool> get hasPublicKey async {
+    final prefs = await SharedPreferences.getInstance();
+    final scopeKeys = await _resolveScopeKeys(prefs);
+    _syncScopeCacheFromScopes(scopeKeys);
+    final pub = await _firstPublicKeyForScopes(prefs, scopeKeys);
+    return _isPresent(pub);
+  }
+
   Future<bool> hasKeyPairForAccount({
     String? userId,
     String? username,
@@ -311,11 +319,27 @@ class PgpService extends ChangeNotifier {
     final scopeKey = _primaryScopeKey(scopeKeys);
     _syncScopeCache(scopeKey);
     if (scopeKey == null) {
-      throw Exception('No authenticated account context for key import');
+      throw Exception(
+        'No authenticated account context. Please log in again before importing keys.',
+      );
     }
 
     final normalizedPublic = publicKey.trim();
     final normalizedPrivate = privateKey.trim();
+
+    // Validate key format before saving
+    if (normalizedPublic.isNotEmpty &&
+        !normalizedPublic.contains('BEGIN PGP PUBLIC KEY')) {
+      throw FormatException(
+        'The file does not contain a valid PGP public key block.',
+      );
+    }
+    if (normalizedPrivate.isNotEmpty &&
+        !normalizedPrivate.contains('BEGIN PGP PRIVATE KEY')) {
+      throw FormatException(
+        'The file does not contain a valid PGP private key block.',
+      );
+    }
 
     if (normalizedPublic.isEmpty) {
       for (final scoped in scopeKeys) {

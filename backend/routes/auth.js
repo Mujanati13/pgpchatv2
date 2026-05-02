@@ -178,7 +178,7 @@ async function upsertPublicKey(req, res) {
       `bytes=${Buffer.byteLength(publicKey, 'utf8')}`
     );
 
-    res.json({ success: true });
+    res.json({ success: true, keyBytes: Buffer.byteLength(publicKey, 'utf8') });
   } catch (err) {
     console.error('[Auth] Public key update error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
@@ -191,6 +191,25 @@ router.put('/public-key', authenticate, upsertPublicKey);
 // POST /api/auth/public-key — fallback for environments that block PUT
 router.post('/public-key', authenticate, upsertPublicKey);
 
+// GET /api/auth/public-key — retrieve current user's stored public key (for sync verification)
+router.get('/public-key', authenticate, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT public_key FROM users WHERE id = ?',
+      [req.userId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({
+      publicKey: rows[0].public_key || null,
+      hasKey: !!rows[0].public_key,
+    });
+  } catch (err) {
+    console.error('[Auth] Get public key error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 // POST /api/auth/reset-pgp  — PGP reset protocol: wipe chats, contacts, keys
 router.post('/reset-pgp', authenticate, async (req, res) => {
   const conn = await pool.getConnection();
