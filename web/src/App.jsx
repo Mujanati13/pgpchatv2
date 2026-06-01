@@ -345,7 +345,7 @@ function App() {
             <article className="contact-card" aria-label="General support contact">
               <h3>General Support</h3>
               <p>For setup help, account issues, or onboarding assistance.</p>
-              <a className="contact-link" href="mailto:support@pgpchat.app">support@pgpchat.app</a>
+              <a className="contact-link" href="mailto:matrixchatreloaded@proton.me">matrixchatreloaded@proton.me</a>
             </article>
           </div>
         </section>
