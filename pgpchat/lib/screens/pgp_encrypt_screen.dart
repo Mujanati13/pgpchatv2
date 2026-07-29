@@ -30,7 +30,8 @@ class _PgpEncryptScreenState extends State<PgpEncryptScreen> {
 
   Future<void> _importPublicKey() async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
+      type: FileType.custom,
+      allowedExtensions: PgpService.supportedKeyFileExtensions,
       allowMultiple: false,
     );
     if (result == null || result.files.isEmpty) return;
@@ -42,7 +43,11 @@ class _PgpEncryptScreenState extends State<PgpEncryptScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Not a valid PGP public key file')),
+          const SnackBar(
+            content: Text(
+              'Not a valid PGP public key file (.asc).',
+            ),
+          ),
         );
       }
     }

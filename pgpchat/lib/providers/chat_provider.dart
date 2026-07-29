@@ -130,18 +130,45 @@ class ChatProvider extends ChangeNotifier {
     required String encryptedBody,
     String? signature,
   }) async {
+    // Display the outgoing encrypted message immediately. The server response
+    // still decides whether it was delivered, but it should not block the UI.
+    final localId = 'local-${DateTime.now().microsecondsSinceEpoch}';
+    final localMessage = <String, dynamic>{
+      'id': localId,
+      'sender_id': '_local_',
+      'recipient_id': recipientId,
+      'encrypted_body': encryptedBody,
+      'signature': signature,
+      'created_at': DateTime.now().toIso8601String(),
+      'is_sending': true,
+    };
+    _messages = [localMessage, ..._messages];
+    notifyListeners();
+
     try {
-      await _api.sendMessage(
+      final result = await _api.sendMessage(
         recipientId: recipientId,
         encryptedBody: encryptedBody,
         signature: signature,
       );
+      final index = _messages.indexWhere((message) => message['id'] == localId);
+      if (index != -1) {
+        _messages[index] = {
+          ...localMessage,
+          'id': result['id'] ?? localId,
+          'created_at': result['createdAt'] ?? localMessage['created_at'],
+          'is_sending': false,
+        };
+        notifyListeners();
+      }
       return true;
     } on ApiException catch (e) {
+      _messages.removeWhere((message) => message['id'] == localId);
       _error = e.message;
       notifyListeners();
       return false;
     } catch (e) {
+      _messages.removeWhere((message) => message['id'] == localId);
       _error = 'Failed to send message';
       notifyListeners();
       return false;

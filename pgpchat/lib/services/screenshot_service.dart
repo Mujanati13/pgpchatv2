@@ -2,8 +2,7 @@ import 'package:flutter/services.dart';
 
 /// Listens for screenshot attempts via native MethodChannel.
 ///
-/// - **Android**: FLAG_SECURE blocks screenshots (black screen).
-///   The channel only reports that prevention is active.
+/// - **Android**: Screenshots are allowed.
 /// - **iOS**: The native side detects `userDidTakeScreenshotNotification`
 ///   and invokes "onScreenshotDetected" on this channel.
 class ScreenshotService {

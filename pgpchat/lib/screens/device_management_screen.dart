@@ -96,11 +96,6 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
     }
   }
 
-  void _handleSessionExpired() {
-    if (!mounted) return;
-    context.read<AuthProvider>().logout();
-  }
-
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -185,6 +180,9 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
                         deviceName:
                             currentSession.first['device_name'] as String? ??
                                 'This Device',
+                        deviceType:
+                            currentSession.first['device_type'] as String? ??
+                                'unknown',
                         onLogout: () {
                           context.read<AuthProvider>().logout();
                         },
@@ -222,14 +220,16 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
                     ...otherSessions.map((session) {
                       final deviceName =
                           session['device_name'] as String? ?? 'Unknown Device';
+                      final deviceType =
+                          session['device_type'] as String? ?? 'unknown';
                       final lastActive = session['last_active'] as String? ?? '';
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _SessionItem(
-                          icon: _deviceIcon(deviceName),
+                          icon: _deviceIcon(deviceName, deviceType: deviceType),
                           name: deviceName,
                           lastActive: 'Last active: ${_formatAge(lastActive)}',
-                          location: 'Session #${session['id']}',
+                          location: _formatDeviceLabel(deviceType),
                           onTerminate: () {
                             final id = session['id']?.toString();
                             if (id != null) _terminateSession(id);
@@ -292,19 +292,50 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
     );
   }
 
-  IconData _deviceIcon(String name) {
+  IconData _deviceIcon(String name, {String? deviceType}) {
     final lower = name.toLowerCase();
-    if (lower.contains('iphone') || lower.contains('android') ||
-        lower.contains('phone') || lower.contains('mobile')) {
+    final type = deviceType?.toLowerCase() ?? '';
+    if (type == 'android' || type == 'ios') {
+      return Icons.smartphone;
+    }
+    if (lower.contains('iphone') ||
+        lower.contains('android') ||
+        lower.contains('phone') ||
+        lower.contains('mobile')) {
       return Icons.smartphone;
     }
     if (lower.contains('ipad') || lower.contains('tablet')) {
       return Icons.tablet_android;
     }
+    if (type == 'macos') {
+      return Icons.laptop_mac;
+    }
+    if (type == 'windows' || type == 'linux') {
+      return Icons.desktop_windows;
+    }
     if (lower.contains('mac') || lower.contains('laptop')) {
       return Icons.laptop_mac;
     }
     return Icons.desktop_windows;
+  }
+
+  String _formatDeviceLabel(String deviceType) {
+    switch (deviceType.toLowerCase()) {
+      case 'android':
+        return 'Android';
+      case 'ios':
+        return 'iOS';
+      case 'macos':
+        return 'macOS';
+      case 'windows':
+        return 'Windows';
+      case 'linux':
+        return 'Linux';
+      case 'fuchsia':
+        return 'Fuchsia';
+      default:
+        return 'Unknown platform';
+    }
   }
 
   String _formatAge(String timestamp) {
@@ -323,10 +354,12 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen> {
 
 class _CurrentDeviceCard extends StatelessWidget {
   final String deviceName;
+  final String deviceType;
   final VoidCallback onLogout;
 
   const _CurrentDeviceCard({
     required this.deviceName,
+    required this.deviceType,
     required this.onLogout,
   });
 
@@ -362,8 +395,8 @@ class _CurrentDeviceCard extends StatelessWidget {
                       color: AppColors.primary.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.smartphone,
+                    child: Icon(
+                      _currentDeviceIcon(deviceType),
                       size: 24,
                       color: AppColors.primary,
                     ),
@@ -382,6 +415,14 @@ class _CurrentDeviceCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
+                        Text(
+                          deviceName,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSubDark,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
                             Container(
@@ -393,8 +434,10 @@ class _CurrentDeviceCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Text(
-                              'Online now',
+                            Text(
+                              deviceType.toLowerCase() == 'unknown'
+                                  ? 'Online now'
+                                  : 'Online now • ${deviceType.toUpperCase()}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textSubDark,
@@ -451,6 +494,21 @@ class _CurrentDeviceCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  IconData _currentDeviceIcon(String deviceType) {
+    switch (deviceType.toLowerCase()) {
+      case 'android':
+      case 'ios':
+        return Icons.smartphone;
+      case 'macos':
+        return Icons.laptop_mac;
+      case 'windows':
+      case 'linux':
+        return Icons.desktop_windows;
+      default:
+        return Icons.devices;
+    }
   }
 }
 

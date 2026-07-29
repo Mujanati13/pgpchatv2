@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:pgpchat/services/pgp_service.dart';
 
 class DownloadService {
   static const MethodChannel _androidChannel = MethodChannel(
@@ -33,7 +33,7 @@ class DownloadService {
       dialogTitle: 'Save File',
       fileName: fileName,
       type: FileType.custom,
-      allowedExtensions: ['txt'],
+      allowedExtensions: PgpService.supportedKeyFileExtensions,
       bytes: bytes,
     );
   }

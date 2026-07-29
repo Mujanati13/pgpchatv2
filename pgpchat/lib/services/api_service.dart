@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -136,18 +137,28 @@ class ApiService {
     String username,
     String password,
   ) async {
+    final deviceInfo = _deviceInfoPayload();
     final result = await post(
       '/auth/register',
-      body: {'username': username, 'password': password},
+      body: {
+        'username': username,
+        'password': password,
+        ...deviceInfo,
+      },
     );
     await setToken(result['token'] as String);
     return result;
   }
 
   Future<Map<String, dynamic>> login(String username, String password) async {
+    final deviceInfo = _deviceInfoPayload();
     final result = await post(
       '/auth/login',
-      body: {'username': username, 'password': password},
+      body: {
+        'username': username,
+        'password': password,
+        ...deviceInfo,
+      },
     );
     await setToken(result['token'] as String);
     return result;
@@ -392,6 +403,50 @@ class ApiService {
       '/settings/auto-delete-now',
       body: hours != null ? {'hours': hours} : null,
     );
+  }
+
+  Map<String, String> _deviceInfoPayload() {
+    final deviceType = _deviceType();
+    return {
+      'deviceType': deviceType,
+      'deviceName': _deviceName(deviceType),
+    };
+  }
+
+  String _deviceType() {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.macOS:
+        return 'macos';
+      case TargetPlatform.windows:
+        return 'windows';
+      case TargetPlatform.linux:
+        return 'linux';
+      case TargetPlatform.fuchsia:
+        return 'fuchsia';
+    }
+  }
+
+  String _deviceName(String deviceType) {
+    switch (deviceType) {
+      case 'android':
+        return 'Android Device';
+      case 'ios':
+        return 'iPhone';
+      case 'macos':
+        return 'Mac';
+      case 'windows':
+        return 'Windows PC';
+      case 'linux':
+        return 'Linux Device';
+      case 'fuchsia':
+        return 'Fuchsia Device';
+      default:
+        return 'Unknown Device';
+    }
   }
 }
 

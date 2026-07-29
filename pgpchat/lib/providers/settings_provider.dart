@@ -20,14 +20,9 @@ class SettingsProvider extends ChangeNotifier {
 
     try {
       final result = await _api.getSettings();
-      final settings = result['settings'] as Map<String, dynamic>?;
-      if (settings != null) {
-        _autoDeleteEnabled = settings['auto_delete_enabled'] == 1 ||
-            settings['auto_delete_enabled'] == true;
-        _autoDeleteHours = settings['auto_delete_hours'] as int? ?? 24;
-        _contactsEnabled = settings['contacts_enabled'] == 1 ||
-            settings['contacts_enabled'] == true;
-      }
+      _autoDeleteEnabled = result['autoDeleteEnabled'] == true;
+      _autoDeleteHours = result['autoDeleteHours'] as int? ?? 24;
+      _contactsEnabled = result['contactsEnabled'] == true;
     } catch (_) {}
 
     _isLoading = false;

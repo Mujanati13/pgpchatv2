@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -25,7 +24,16 @@ class ManagePgpScreen extends StatefulWidget {
   State<ManagePgpScreen> createState() => _ManagePgpScreenState();
 }
 
-enum _KeySyncStatus { unknown, noKeys, localOnly, synced, syncing, error }
+enum _KeySyncStatus {
+  unknown,
+  noKeys,
+  missingPublic,
+  missingPrivate,
+  localOnly,
+  synced,
+  syncing,
+  error,
+}
 
 class _ManagePgpScreenState extends State<ManagePgpScreen> {
   final PgpService _pgp = PgpService();
@@ -51,12 +59,24 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
   void _onPgpChanged() => _refreshKeyStatus();
 
   Future<void> _refreshKeyStatus() async {
-    final hasPub = await _pgp.hasPublicKey;
-    final hasPair = await _pgp.hasKeyPair;
+    final localKey = await _pgp.publicKey;
+    final privateKey = await _pgp.privateKey;
+    final hasPub = localKey != null && localKey.trim().isNotEmpty;
+    final hasPriv = privateKey != null && privateKey.trim().isNotEmpty;
     if (!mounted) return;
 
-    if (!hasPub && !hasPair) {
+    if (!hasPub && !hasPriv) {
       setState(() => _syncStatus = _KeySyncStatus.noKeys);
+      return;
+    }
+
+    if (!hasPub) {
+      setState(() => _syncStatus = _KeySyncStatus.missingPublic);
+      return;
+    }
+
+    if (!hasPriv) {
+      setState(() => _syncStatus = _KeySyncStatus.missingPrivate);
       return;
     }
 
@@ -66,9 +86,7 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
       final userId = prefs.getString('user_id');
       if (userId != null) {
         final serverKey = await _api.getUserPublicKey(userId);
-        final localKey = await _pgp.publicKey;
         if (serverKey != null &&
-            localKey != null &&
             serverKey.replaceAll(RegExp(r'\s+'), '') ==
                 localKey.replaceAll(RegExp(r'\s+'), '')) {
           if (mounted) setState(() => _syncStatus = _KeySyncStatus.synced);
@@ -120,7 +138,8 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
 
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: PgpService.supportedKeyFileExtensions,
         allowMultiple: false,
       );
       if (result == null || result.files.isEmpty) {
@@ -140,7 +159,9 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please choose a valid text-based PGP key file.'),
+              content: Text(
+                'Please choose a valid PGP key file (.asc).',
+              ),
             ),
           );
         }
@@ -158,7 +179,8 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
           );
         }
         final pubResult = await FilePicker.platform.pickFiles(
-          type: FileType.any,
+          type: FileType.custom,
+          allowedExtensions: PgpService.supportedKeyFileExtensions,
           allowMultiple: false,
         );
         String publicKey = '';
@@ -184,7 +206,7 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
             SnackBar(
               content: Text(
                 publicKey.isEmpty
-                    ? 'Private key imported. Import your public key too to enable syncing.'
+                    ? 'Private key imported. Import your public key file too (.asc) to enable syncing.'
                     : (syncedToServer
                         ? 'Key pair imported and synced to server ✓'
                         : 'Key pair imported locally. Auto-sync failed — tap "Sync public key to server".'),
@@ -194,7 +216,52 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
           );
         }
       } else if (content.contains('BEGIN PGP PUBLIC KEY')) {
-        await _pgp.importKeys(publicKey: content, privateKey: '');
+        final existingPublicKey = await _pgp.publicKey;
+        final isAlreadyImported = existingPublicKey != null &&
+            existingPublicKey.trim().isNotEmpty &&
+            _pgp.publicKeysEqual(content, existingPublicKey);
+        if (isAlreadyImported) {
+          await _refreshKeyStatus();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'This public key is already imported on this device. No changes were needed.',
+                ),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
+        final existingPrivateKey = await _pgp.privateKey;
+        final hasExistingPrivateKey =
+            existingPrivateKey != null && existingPrivateKey.trim().isNotEmpty;
+        if (hasExistingPrivateKey) {
+          final matchesExistingPrivateKey =
+              await _pgp.publicKeyMatchesPrivateKey(
+            publicKey: content,
+            privateKey: existingPrivateKey,
+          );
+          if (!matchesExistingPrivateKey) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'This public key does not match the private key on this device. Import the matching private key backup instead.',
+                  ),
+                  duration: Duration(seconds: 6),
+                ),
+              );
+            }
+            return;
+          }
+        }
+        await _pgp.importKeys(
+          publicKey: content,
+          privateKey: existingPrivateKey ?? '',
+        );
 
         // Auto-sync public key to server with retry
         if (mounted) setState(() => _syncStatus = _KeySyncStatus.syncing);
@@ -207,8 +274,12 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
             SnackBar(
               content: Text(
                 syncedToServer
-                    ? 'Public key imported and synced to server ✓'
-                    : 'Public key imported locally. Auto-sync failed — tap "Sync public key to server".',
+                    ? (hasExistingPrivateKey
+                        ? 'Public key imported and synced to server ✓'
+                        : 'Public key imported and synced. Import your private key backup to decrypt messages.')
+                    : (hasExistingPrivateKey
+                        ? 'Public key imported locally. Auto-sync failed — tap "Sync public key to server".'
+                        : 'Public key imported locally, but private key is missing. Import your private key backup to decrypt messages.'),
               ),
               duration: const Duration(seconds: 4),
             ),
@@ -217,7 +288,11 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid PGP key file — no PGP key block found')),
+            const SnackBar(
+              content: Text(
+                'Invalid PGP key file — no PGP key block was found in the selected .asc file.',
+              ),
+            ),
           );
         }
       }
@@ -302,7 +377,7 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
     }
 
     try {
-      final fileName = 'PGP-${DateTime.now().millisecondsSinceEpoch}.txt';
+      final fileName = 'PGP-${DateTime.now().millisecondsSinceEpoch}.asc';
       final savedPath = await DownloadService.downloadTextFile(
         fileName: fileName,
         content: publicKey,
@@ -397,6 +472,16 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
         color = AppColors.amber500;
         title = 'No PGP keys';
         subtitle = 'Generate or import a key pair to start';
+      case _KeySyncStatus.missingPublic:
+        icon = Icons.warning_amber_rounded;
+        color = AppColors.amber500;
+        title = 'Public key missing';
+        subtitle = 'Import the paired public key so others can encrypt to you';
+      case _KeySyncStatus.missingPrivate:
+        icon = Icons.warning_amber_rounded;
+        color = AppColors.amber500;
+        title = 'Private key missing';
+        subtitle = 'Import your private key backup to decrypt messages';
       case _KeySyncStatus.localOnly:
         icon = Icons.warning_amber_rounded;
         color = AppColors.amber500;
@@ -600,7 +685,7 @@ class _ManagePgpScreenState extends State<ManagePgpScreen> {
                           iconColor: AppColors.primary,
                           iconBgColor: AppColors.primary.withValues(alpha: 0.1),
                           title: 'Download Public Key',
-                          subtitle: 'Save public key as PGP.txt',
+                          subtitle: 'Save public key as .asc',
                           onTap: () => _downloadPublicKey(context),
                         ),
                       ],

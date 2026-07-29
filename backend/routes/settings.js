@@ -40,6 +40,24 @@ router.get('/', async (req, res) => {
 router.put('/', async (req, res) => {
   try {
     const { autoDeleteEnabled, autoDeleteHours, contactsEnabled } = req.body;
+    const [rows] = await pool.execute(
+      'SELECT auto_delete_enabled, auto_delete_hours, contacts_enabled FROM user_settings WHERE user_id = ?',
+      [req.userId]
+    );
+    const current = rows[0] || {
+      auto_delete_enabled: 1,
+      auto_delete_hours: 24,
+      contacts_enabled: 0,
+    };
+    const nextAutoDeleteEnabled = autoDeleteEnabled === undefined
+      ? current.auto_delete_enabled
+      : (autoDeleteEnabled ? 1 : 0);
+    const nextAutoDeleteHours = autoDeleteHours === undefined
+      ? current.auto_delete_hours
+      : (autoDeleteHours || 24);
+    const nextContactsEnabled = contactsEnabled === undefined
+      ? current.contacts_enabled
+      : (contactsEnabled ? 1 : 0);
 
     await pool.execute(
       `INSERT INTO user_settings (user_id, auto_delete_enabled, auto_delete_hours, contacts_enabled)
@@ -50,9 +68,9 @@ router.put('/', async (req, res) => {
          contacts_enabled = VALUES(contacts_enabled)`,
       [
         req.userId,
-        autoDeleteEnabled ? 1 : 0,
-        autoDeleteHours || 24,
-        contactsEnabled ? 1 : 0,
+        nextAutoDeleteEnabled,
+        nextAutoDeleteHours,
+        nextContactsEnabled,
       ]
     );
 

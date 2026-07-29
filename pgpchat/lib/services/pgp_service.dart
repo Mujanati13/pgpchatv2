@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
 class PgpService extends ChangeNotifier {
+  static const List<String> supportedKeyFileExtensions = ['asc'];
   static const String _privateKeyBase = 'pgp_private_key';
   static const String _publicKeyBase = 'pgp_public_key';
   static const String _keyNameBase = 'pgp_key_name';
@@ -22,7 +23,7 @@ class PgpService extends ChangeNotifier {
 
   bool _isPresent(String? value) => value != null && value.trim().isNotEmpty;
 
-  String _scopedPref(String base, String scopeKey) => '${base}::$scopeKey';
+  String _scopedPref(String base, String scopeKey) => '$base::$scopeKey';
 
   String? _normalizedUserId(String? value) {
     final id = value?.trim();
@@ -113,6 +114,21 @@ class PgpService extends ChangeNotifier {
     final left = a.replaceAll(RegExp(r'\s+'), '');
     final right = b.replaceAll(RegExp(r'\s+'), '');
     return left == right;
+  }
+
+  bool publicKeysEqual(String a, String b) => _armoredKeysEqual(a, b);
+
+  Future<bool> publicKeyMatchesPrivateKey({
+    required String publicKey,
+    required String privateKey,
+  }) async {
+    final derivedPublicKey =
+        await OpenPGP.convertPrivateKeyToPublicKey(privateKey.trim());
+    if (_armoredKeysEqual(publicKey, derivedPublicKey)) return true;
+
+    final importedMetadata = await OpenPGP.getPublicKeyMetadata(publicKey);
+    final derivedMetadata = await OpenPGP.getPublicKeyMetadata(derivedPublicKey);
+    return importedMetadata.fingerprint == derivedMetadata.fingerprint;
   }
 
   Future<bool> _hasScopedKeyPair(

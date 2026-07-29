@@ -33,7 +33,7 @@ class KeygenSuccessScreen extends StatelessWidget {
     }
 
     try {
-      final fileName = 'PGP-${DateTime.now().millisecondsSinceEpoch}.txt';
+      final fileName = 'PGP-${DateTime.now().millisecondsSinceEpoch}.asc';
       final savedPath = await DownloadService.downloadTextFile(
         fileName: fileName,
         content: publicKey,
@@ -81,7 +81,7 @@ class KeygenSuccessScreen extends StatelessWidget {
 
     try {
       final fileName =
-          'PGP-private-${DateTime.now().millisecondsSinceEpoch}.txt';
+          'PGP-private-${DateTime.now().millisecondsSinceEpoch}.asc';
       final savedPath = await DownloadService.downloadTextFile(
         fileName: fileName,
         content: privateKey,

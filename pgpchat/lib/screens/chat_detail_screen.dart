@@ -10,7 +10,6 @@ import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
 import '../services/pgp_service.dart';
-import '../services/screenshot_service.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/responsive_center.dart';
 import 'auto_delete_screen.dart';
@@ -42,11 +41,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _scrollController = ScrollController();
   final _pgp = PgpService();
   final _api = ApiService();
-  final _screenshotService = ScreenshotService();
   String? _passphrase;
   String _fingerprint = '';
   String? _otherPublicKey;
   bool _isCheckingKey = true; // true until _fetchLatestPublicKey completes
+  bool _isSyncingExpiredMessages = false;
   Timer? _countdownTimer;
   StreamSubscription<String>? _incomingMessageSub;
   Duration _remaining = Duration.zero;
@@ -80,10 +79,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               curve: Curves.easeOut,
             );
           }
-        });
 
-    // Listen for screenshot attempts (iOS callback; Android uses FLAG_SECURE)
-    _screenshotService.startListening(onDetected: _onScreenshotDetected);
+          _updateRemaining();
+        });
   }
 
   Future<void> _fetchLatestPublicKey() async {
@@ -209,13 +207,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _updateRemaining() {
     final settings = context.read<SettingsProvider>();
     final messages = context.read<ChatProvider>().messages;
-    if (messages.isEmpty) {
+    final visibleMessages = _filterExpiredMessages(
+      messages,
+      settings.autoDeleteHours,
+    );
+    if (visibleMessages.length != messages.length) {
+      _syncExpiredMessages();
+    }
+    if (visibleMessages.isEmpty) {
       setState(() => _remaining = Duration(hours: settings.autoDeleteHours));
       return;
     }
     // Find the newest message timestamp
     DateTime? newest;
-    for (final msg in messages) {
+    for (final msg in visibleMessages) {
       final ts = msg['created_at']?.toString();
       if (ts == null) continue;
       try {
@@ -232,26 +237,49 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     setState(() => _remaining = diff.isNegative ? Duration.zero : diff);
   }
 
+  List<Map<String, dynamic>> _filterExpiredMessages(
+    List<Map<String, dynamic>> messages,
+    int autoDeleteHours,
+  ) {
+    final cutoff = DateTime.now().subtract(Duration(hours: autoDeleteHours));
+    return messages.where((msg) {
+      final ts = msg['created_at']?.toString();
+      if (ts == null) return true;
+      try {
+        final createdAt = DateTime.parse(ts);
+        return !createdAt.isBefore(cutoff);
+      } catch (_) {
+        return true;
+      }
+    }).toList();
+  }
+
+  Future<void> _syncExpiredMessages() async {
+    if (_disposed || !mounted || _isSyncingExpiredMessages) return;
+    final settings = context.read<SettingsProvider>();
+    if (!settings.autoDeleteEnabled) return;
+
+    _isSyncingExpiredMessages = true;
+    try {
+      await _api.autoDeleteNow(hours: settings.autoDeleteHours);
+      if (!mounted || _disposed) return;
+      await context.read<ChatProvider>().loadMessages(widget.otherUserId);
+    } catch (_) {
+      // Keep the UI responsive even if background cleanup fails.
+    } finally {
+      _isSyncingExpiredMessages = false;
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true;
     _incomingMessageSub?.cancel();
-    _screenshotService.stopListening();
     context.read<ChatProvider>().stopMessagePolling();
     _countdownTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onScreenshotDetected() {
-    if (_disposed) return;
-    // Send screenshot alert to the other user in this chat
-    ApiService().sendScreenshotAlert(widget.otherUserId);
-    // Reload messages so the alert appears in the chat
-    if (mounted) {
-      context.read<ChatProvider>().loadMessages(widget.otherUserId);
-    }
   }
 
   Future<void> _sendMessage() async {
@@ -261,9 +289,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     setState(() => _isSendingMessage = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await _refreshRecipientPublicKeyBeforeSend();
-      if (!mounted || _disposed) return;
-
       if (_isCheckingKey) {
         messenger.showSnackBar(
           const SnackBar(content: Text('Checking recipient PGP key...')),
@@ -278,11 +303,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         return;
       }
 
-      final encrypted = await _pgp.encrypt(text, _otherPublicKey!);
-      String? signature;
-      if (_passphrase != null) {
-        signature = await _pgp.sign(text, _passphrase!);
-      }
+      final encryption = _pgp.encrypt(text, _otherPublicKey!);
+      final signing = _passphrase == null
+          ? Future<String?>.value(null)
+          : _pgp.sign(text, _passphrase!).then<String?>((value) => value);
+      final crypto = await Future.wait([encryption, signing]);
+      final encrypted = crypto[0] as String;
+      final signature = crypto[1] as String?;
 
       if (!mounted) return;
       final success = await context.read<ChatProvider>().sendMessage(
@@ -294,7 +321,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (success) {
         _messageController.clear();
         if (mounted) {
-          await context.read<ChatProvider>().loadMessages(widget.otherUserId);
           // Scroll to bottom (index 0 = newest with reverse:true)
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
@@ -722,6 +748,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final settings = context.watch<SettingsProvider>();
     final autoDelete = settings.autoDeleteEnabled;
     final hours = settings.autoDeleteHours;
+    final visibleMessages = autoDelete
+        ? _filterExpiredMessages(chat.messages, hours)
+        : chat.messages;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -891,13 +920,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                   // ─── Messages List ───
                   Expanded(
-                    child: chat.isLoading && chat.messages.isEmpty
+                    child: chat.isLoading && visibleMessages.isEmpty
                         ? const Center(
                             child: CircularProgressIndicator(
                               color: AppColors.primary,
                             ),
                           )
-                        : chat.messages.isEmpty
+                        : visibleMessages.isEmpty
                         ? _buildEmptyState()
                         : ListView.builder(
                             controller: _scrollController,
@@ -907,7 +936,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               vertical: 8,
                             ),
                             itemCount:
-                                chat.messages.length +
+                                visibleMessages.length +
                                 1 +
                                 (_isUploadingImage ? 1 : 0),
                             itemBuilder: (context, index) {
@@ -919,14 +948,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                                   ? index - 1
                                   : index;
                               // "Today" divider at end (top visually)
-                              if (msgIndex == chat.messages.length) {
+                              if (msgIndex == visibleMessages.length) {
                                 return _buildDateDivider('Today');
                               }
-                              final msg = chat.messages[msgIndex];
+                              final msg = visibleMessages[msgIndex];
                               final isMine =
                                   msg['sender_id'] != widget.otherUserId;
 
-                              // Screenshot alert — render as system message
                               if (msg['signature'] == '__SCREENSHOT_ALERT__') {
                                 return _ScreenshotAlertBubble(
                                   text: msg['encrypted_body'] as String? ?? '',
